@@ -24,6 +24,13 @@ class AuthRepository {
     );
   }
 
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    await _client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: 'io.supabase.ember://login-callback/',
+    );
+  }
+
   Future<void> signOut() async {
     await _client.auth.signOut();
   }

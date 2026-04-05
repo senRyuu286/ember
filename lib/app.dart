@@ -1,38 +1,45 @@
-import 'package:ember/features/auth/data/auth_repository.dart';
+import 'package:app_links/app_links.dart';
+import 'package:ember/core/router/app_router.dart';
+import 'package:ember/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class Ember extends StatefulWidget {
+class Ember extends ConsumerStatefulWidget {
   const Ember({super.key});
 
   @override
-  State<Ember> createState() => _WorkoutAppState();
+  ConsumerState<Ember> createState() => _EmberState();
 }
 
-class _WorkoutAppState extends State<Ember> {
+class _EmberState extends ConsumerState<Ember> {
+  late final AppLinks _appLinks;
+
   @override
   void initState() {
     super.initState();
-    _testSignUp();
+    _appLinks = AppLinks();
+    _listenForDeepLinks();
   }
 
-  Future<void> _testSignUp() async {
-    final repo = AuthRepository(Supabase.instance.client);
-    final response = await repo.signUp(
-      email: 'sampleemail@email.com',
-      password: 'password123',
-    );
-    print(response.user?.id); // Should print a UUID
+  void _listenForDeepLinks() {
+    _appLinks.uriLinkStream.listen((uri) async {
+      await Supabase.instance.client.auth.getSessionFromUrl(uri);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+    // Read once — never watch. The router must never be recreated.
+    final router = ref.read(appRouterProvider);
+
+    return MaterialApp.router(
+      title: 'Ember',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
+      routerConfig: router,
     );
   }
 }

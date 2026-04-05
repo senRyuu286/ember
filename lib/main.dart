@@ -1,3 +1,4 @@
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -12,8 +13,15 @@ Future<void> main() async {
     anonKey: SupabaseConfig.anonKey,
   );
 
+  // Handle deep link that arrives while the app is cold-started
+  final appLinks = AppLinks();
+  final initialLink = await appLinks.getInitialLink();
+  if (initialLink != null) {
+    await Supabase.instance.client.auth.getSessionFromUrl(initialLink);
+  }
+
   runApp(
-    ProviderScope(
+    const ProviderScope(
       child: Ember(),
     ),
   );
