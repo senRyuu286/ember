@@ -7,8 +7,8 @@ import 'package:ember/features/auth/ui/sign_up_screen.dart';
 import 'package:ember/features/branding/ui/splash_screen.dart';
 import 'package:ember/features/branding/ui/welcome_screen.dart';
 import 'package:ember/features/home/ui/home_screen.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'app_routes.dart';
 
@@ -26,25 +26,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final currentPath = state.matchedLocation;
 
       final isOnSplash = currentPath == AppRoutes.splash;
-      final isOnAuthFlow = currentPath == AppRoutes.welcome ||
-          currentPath == AppRoutes.signIn ||
-          currentPath == AppRoutes.signUp ||
-          currentPath == AppRoutes.forgotPassword;
-      final isOnCheckEmail = currentPath == AppRoutes.checkEmail;
       final isOnProfileSetup = currentPath == AppRoutes.profileSetup;
+      final isOnCheckEmail = currentPath == AppRoutes.checkEmail;
 
+      // Splash handles its own redirect
       if (isOnSplash) return null;
 
-      if (needsProfileSetup) return AppRoutes.profileSetup;
-
+      // Always allow profile setup through regardless of auth state
       if (isOnProfileSetup) return null;
 
-      if (isAuthenticated && isOnAuthFlow) return AppRoutes.home;
+      // Always allow check email through
+      if (isOnCheckEmail) return null;
 
-      if (!isAuthenticated && !isOnAuthFlow && !isOnCheckEmail) {
-        return AppRoutes.welcome;
-      }
+      // New signup that still needs profile setup
+      if (needsProfileSetup) return AppRoutes.profileSetup;
 
+      // Authenticated users must not linger on auth-only screens
+      final isOnAuthOnly = currentPath == AppRoutes.signIn ||
+          currentPath == AppRoutes.signUp ||
+          currentPath == AppRoutes.forgotPassword;
+      if (isAuthenticated && isOnAuthOnly) return AppRoutes.home;
+
+      // Guest and authenticated users can both reach home and welcome freely
       return null;
     },
     routes: [

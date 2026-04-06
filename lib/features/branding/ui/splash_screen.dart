@@ -39,10 +39,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.12),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -54,7 +51,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
       if (!mounted) return;
 
-      // Play animation then navigate
       await _controller.forward();
 
       if (!mounted) return;

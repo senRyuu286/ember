@@ -13,7 +13,6 @@ Future<void> main() async {
     anonKey: SupabaseConfig.anonKey,
   );
 
-  // Handle deep link that arrives while the app is cold-started
   final appLinks = AppLinks();
   final initialLink = await appLinks.getInitialLink();
   if (initialLink != null) {

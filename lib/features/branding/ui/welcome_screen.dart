@@ -60,6 +60,25 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: TextButton(
+              onPressed: () => context.go(AppRoutes.home),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.lightTextSecondary,
+                textStyle: textTheme.labelLarge,
+              ),
+              child: const Text('Skip'),
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: SizedBox.expand(
           child: Padding(
@@ -71,9 +90,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 8),
 
-                    // Logo + wordmark
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -95,17 +113,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       ],
                     ),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 32),
 
                     // Hero illustration
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: Image.asset(
-                          'assets/illustrations/hero-illustration.png',
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
+                      child: Image.asset(
+                        'assets/illustrations/hero-illustration.png',
+                        width: double.infinity,
+                        fit: BoxFit.contain,
                       ),
                     ),
 
