@@ -22,32 +22,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (authState.isLoading) return null;
 
-      final isAuthenticated = authState.asData?.value.session != null;
       final currentPath = state.matchedLocation;
 
       final isOnSplash = currentPath == AppRoutes.splash;
       final isOnProfileSetup = currentPath == AppRoutes.profileSetup;
       final isOnCheckEmail = currentPath == AppRoutes.checkEmail;
 
-      // Splash handles its own redirect
       if (isOnSplash) return null;
-
-      // Always allow profile setup through regardless of auth state
       if (isOnProfileSetup) return null;
-
-      // Always allow check email through
       if (isOnCheckEmail) return null;
 
-      // New signup that still needs profile setup
+      // In-memory flag set during the current signup flow
       if (needsProfileSetup) return AppRoutes.profileSetup;
 
-      // Authenticated users must not linger on auth-only screens
-      final isOnAuthOnly = currentPath == AppRoutes.signIn ||
-          currentPath == AppRoutes.signUp ||
-          currentPath == AppRoutes.forgotPassword;
-      if (isAuthenticated && isOnAuthOnly) return AppRoutes.home;
-
-      // Guest and authenticated users can both reach home and welcome freely
       return null;
     },
     routes: [
@@ -92,7 +79,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
 class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(Ref ref) {
-    ref.listen(authStateProvider, (_, _) => notifyListeners());
-    ref.listen(needsProfileSetupProvider, (_, _) => notifyListeners());
+    ref.listen(authStateProvider, (_, __) => notifyListeners());
+    ref.listen(needsProfileSetupProvider, (_, __) => notifyListeners());
   }
 }

@@ -19,7 +19,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   String? _selectedAvatarId;
 
-  void _onContinue() {
+  Future<void> _onContinue() async {
     final isValid = _formKey.currentState?.saveAndValidate() ?? false;
     if (!isValid) return;
     if (_selectedAvatarId == null) {
@@ -27,9 +27,23 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       return;
     }
 
-    ref.read(needsProfileSetupProvider.notifier).setComplete();
+    final username = _formKey.currentState!.value['username'] as String;
 
-    // TODO: wire to profile notifier
+    await ref.read(profileSetupNotifierProvider.notifier).saveProfile(
+          username: username,
+          avatarId: _selectedAvatarId!,
+        );
+
+    if (!mounted) return;
+
+    final state = ref.read(profileSetupNotifierProvider);
+    if (state.hasError) {
+      _showSaveError();
+      return;
+    }
+
+    // Clear the flag and navigate to home
+    ref.read(needsProfileSetupProvider.notifier).setComplete();
     context.go(AppRoutes.home);
   }
 
@@ -52,10 +66,31 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     );
   }
 
+  void _showSaveError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Failed to save your profile. Please try again.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.white,
+              ),
+        ),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+    final profileSetupState = ref.watch(profileSetupNotifierProvider);
+    final isLoading = profileSetupState.isLoading;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -108,6 +143,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       keyboardType: TextInputType.text,
                       textInputAction: TextInputAction.done,
                       autocorrect: false,
+                      enabled: !isLoading,
                       decoration: const InputDecoration(
                         hintText: 'e.g. ironlifter42',
                         prefixIcon: Icon(Icons.alternate_email_rounded),
@@ -167,8 +203,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   final isSelected = _selectedAvatarId == avatar['id'];
 
                   return GestureDetector(
-                    onTap: () =>
-                        setState(() => _selectedAvatarId = avatar['id']),
+                    onTap: isLoading
+                        ? null
+                        : () => setState(
+                              () => _selectedAvatarId = avatar['id'],
+                            ),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOut,
@@ -240,8 +279,17 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               const SizedBox(height: 40),
 
               ElevatedButton(
-                onPressed: _onContinue,
-                child: const Text('Continue'),
+                onPressed: isLoading ? null : _onContinue,
+                child: isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.white,
+                        ),
+                      )
+                    : const Text('Continue'),
               ),
 
               const SizedBox(height: 32),

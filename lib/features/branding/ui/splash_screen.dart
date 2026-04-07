@@ -1,6 +1,7 @@
 import 'package:ember/core/router/app_routes.dart';
 import 'package:ember/core/theme/app_colors.dart';
 import 'package:ember/features/auth/providers/auth_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -59,15 +60,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     });
   }
 
-  void _redirect() {
-    final authState = ref.read(authStateProvider);
-    final isAuthenticated = authState.asData?.value.session != null;
+  Future<void> _redirect() async {
+    final session = Supabase.instance.client.auth.currentSession;
+    final user = session?.user;
 
-    if (isAuthenticated) {
-      context.go(AppRoutes.home);
-    } else {
+    if (user == null) {
       context.go(AppRoutes.welcome);
+      return;
     }
+
+    final profile = await ref
+        .read(authRepositoryProvider)
+        .getProfileByUserId(user.id);
+
+    if (!mounted) return;
+
+    final needsProfileSetup = profile == null ||
+        profile['username'] == null ||
+        profile['avatar_id'] == null;
+
+    context.go(needsProfileSetup ? AppRoutes.profileSetup : AppRoutes.home);
   }
 
   @override

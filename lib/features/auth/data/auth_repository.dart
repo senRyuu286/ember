@@ -34,4 +34,35 @@ class AuthRepository {
   Future<void> signOut() async {
     await _client.auth.signOut();
   }
+
+  Future<void> saveProfile({
+    required String username,
+    required String avatarId,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('No authenticated user found.');
+
+    await _client.from('profiles').update({
+      'username': username,
+      'avatar_id': avatarId,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', userId);
+  }
+
+  Future<Map<String, dynamic>?> getProfile() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return null;
+
+    return await getProfileByUserId(userId);
+  }
+
+  Future<Map<String, dynamic>?> getProfileByUserId(String userId) async {
+    final response = await _client
+        .from('profiles')
+        .select()
+        .eq('id', userId)
+        .maybeSingle();
+
+    return response;
+  }
 }

@@ -11,13 +11,16 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 });
 
 final currentUserProvider = Provider<User?>((ref) {
-  return ref.watch(supabaseProvider).auth.currentUser;
+  // Watch authStateProvider so this re-evaluates on every auth change
+  final authState = ref.watch(authStateProvider);
+  return authState.asData?.value.session?.user;
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(ref.watch(supabaseProvider));
 });
 
+// Tracks whether the current session needs profile setup
 final needsProfileSetupProvider =
     NotifierProvider<NeedsProfileSetupNotifier, bool>(
         NeedsProfileSetupNotifier.new);
@@ -55,23 +58,25 @@ class SignUpNotifier extends AsyncNotifier<void> {
 
 // Sign in
 final signInNotifierProvider =
-    AsyncNotifierProvider<SignInNotifier, void>(SignInNotifier.new);
+    AsyncNotifierProvider<SignInNotifier, AuthResponse?>(SignInNotifier.new);
 
-class SignInNotifier extends AsyncNotifier<void> {
+class SignInNotifier extends AsyncNotifier<AuthResponse?> {
   @override
-  Future<void> build() async {}
+  Future<AuthResponse?> build() async => null;
 
-  Future<void> signIn({
+  Future<AuthResponse?> signIn({
     required String email,
     required String password,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await ref.read(authRepositoryProvider).signIn(
+      return await ref.read(authRepositoryProvider).signIn(
             email: email,
             password: password,
           );
     });
+
+    return state.asData?.value;
   }
 }
 
@@ -93,3 +98,39 @@ class ForgotPasswordNotifier extends AsyncNotifier<void> {
     });
   }
 }
+
+// Profile setup
+final profileSetupNotifierProvider =
+    AsyncNotifierProvider<ProfileSetupNotifier, void>(
+        ProfileSetupNotifier.new);
+
+class ProfileSetupNotifier extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  Future<void> saveProfile({
+    required String username,
+    required String avatarId,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(authRepositoryProvider).saveProfile(
+            username: username,
+            avatarId: avatarId,
+          );
+      // Invalidate so the router re-fetches the now-complete profile
+      ref.invalidate(currentProfileProvider);
+    });
+  }
+}
+
+// Fetches the current user's profile from Supabase.
+// Automatically re-fetches when currentUserProvider changes
+// because it watches it — meaning every sign in, sign out,
+// or session restore triggers a fresh fetch.
+final currentProfileProvider =
+    FutureProvider<Map<String, dynamic>?>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return null;
+  return await ref.read(authRepositoryProvider).getProfile();
+});
