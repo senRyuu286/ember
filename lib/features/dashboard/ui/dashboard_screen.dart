@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:ember/core/theme/app_colors.dart';
 
 // Expanded enum to distinguish between a missed day and a future day
 enum DayState { active, rest, missed, future }
@@ -14,14 +14,14 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   // Brand Colors
-  static const Color _bgColor = Color(0xFFDEE1E9);
-  static const Color _primaryOrange = Color(0xFFFA4D1A);
-  static const Color _surfaceColor = Color(0xFFF9FAFF);
+  static const Color _bgColor = AppColors.lightSurfaceVariant;
+  static const Color _primaryOrange = AppColors.primary;
+  static const Color _surfaceColor = AppColors.lightBackground;
 
   // Mock State
   final int _currentStreak = 5;
   final int _restDaysTaken = 1; // Max 3 per week
-  
+
   // Active challenge state (set to null to see the "Choose one" state)
   final Map<String, dynamic> _activeChallenge = {
     "title": "4-Week Full Body",
@@ -31,9 +31,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   };
 
   final List<Map<String, String>> _availableChallenges = [
-    {"title": "14-Day Core Crusher", "subtitle": "Daily ab incinerator", "duration": "2 Weeks"},
-    {"title": "Pull-Up Mastery", "subtitle": "Conquer the bar", "duration": "4 Weeks"},
-    {"title": "Cardio Engine", "subtitle": "Boost your VO2 Max", "duration": "3 Weeks"},
+    {
+      "title": "14-Day Core Crusher",
+      "subtitle": "Daily ab incinerator",
+      "duration": "2 Weeks",
+    },
+    {
+      "title": "Pull-Up Mastery",
+      "subtitle": "Conquer the bar",
+      "duration": "4 Weeks",
+    },
+    {
+      "title": "Cardio Engine",
+      "subtitle": "Boost your VO2 Max",
+      "duration": "3 Weeks",
+    },
   ];
 
   @override
@@ -62,6 +74,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // 1. Top Bar: Custom Logo, App Name, Search, Streak
   Widget _buildTopBar({required int streak}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Row(
       children: [
         // Custom Logo Asset
@@ -71,21 +86,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           height: 28,
           errorBuilder: (context, error, stackTrace) {
             // Fallback just in case asset isn't loaded yet
-            return const Icon(Icons.local_fire_department, color: _primaryOrange, size: 28);
+            return const Icon(
+              Icons.local_fire_department,
+              color: _primaryOrange,
+              size: 28,
+            );
           },
         ),
         const SizedBox(width: 6),
         Text(
           "Ember",
-          style: GoogleFonts.outfit(
+          style: textTheme.displayMedium?.copyWith(
             fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
         ),
         const SizedBox(width: 16),
-        
+
         // Search Bar for Friends
         Expanded(
           child: Container(
@@ -95,7 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
+                  color: colorScheme.shadow.withValues(alpha: 0.02),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -104,8 +122,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: TextField(
               decoration: InputDecoration(
                 hintText: "Find friends...",
-                hintStyle: GoogleFonts.inter(fontSize: 13, color: Colors.black38),
-                prefixIcon: const Icon(Icons.search, size: 18, color: Colors.black45),
+                hintStyle: textTheme.bodySmall?.copyWith(
+                  fontSize: 13,
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
               ),
@@ -113,7 +138,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         const SizedBox(width: 16),
-        
+
         // Streak Indicator (Icon + Number only)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -123,14 +148,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.local_fire_department, color: _primaryOrange, size: 18),
+              const Icon(
+                Icons.local_fire_department,
+                color: _primaryOrange,
+                size: 18,
+              ),
               const SizedBox(width: 4),
               Text(
                 "$streak",
-                style: GoogleFonts.outfit(
+                style: textTheme.headlineMedium?.copyWith(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ],
@@ -142,12 +170,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // 2. Weekly Summary with Rest Days Counter
   Widget _buildWeeklySummary({required int restDays}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final days = ["M", "T", "W", "T", "F", "S", "S"];
-    
+
     // Mock data: Monday active, Tuesday missed, Wednesday active, Thursday rest, Friday-Sunday future
     final dayStates = [
       DayState.active,
-      DayState.missed,  // <-- Missed day (no exercise, not a rest day)
+      DayState.missed, // <-- Missed day (no exercise, not a rest day)
       DayState.active,
       DayState.rest,
       DayState.future,
@@ -163,7 +193,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Text(
               "The Weekly Burn",
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+              style: textTheme.headlineSmall?.copyWith(fontSize: 16),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -173,10 +203,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Text(
                 "$restDays/3 Rest Days",
-                style: GoogleFonts.inter(
+                style: textTheme.labelMedium?.copyWith(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -187,7 +216,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(7, (index) {
             final state = dayStates[index];
-            
+
             Color boxColor;
             BoxBorder? boxBorder;
             Widget innerWidget;
@@ -195,26 +224,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
             switch (state) {
               case DayState.active:
                 boxColor = _primaryOrange;
-                innerWidget = const Icon(Icons.check, size: 20, color: Colors.white);
+                innerWidget = const Icon(
+                  Icons.check,
+                  size: 20,
+                  color: Colors.white,
+                );
                 break;
               case DayState.rest:
-                boxColor = Colors.black12; // Muted background for rest day
+                boxColor = colorScheme.onSurface.withValues(alpha: 0.12);
                 innerWidget = Container(
                   width: 12,
                   height: 3,
                   decoration: BoxDecoration(
-                    color: Colors.black45,
+                    color: colorScheme.onSurfaceVariant,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ); // Subdued dash indicator
                 break;
               case DayState.missed:
-                boxColor = Colors.transparent; 
-                boxBorder = Border.all(color: Colors.black12, width: 2); // Faint border
-                innerWidget = const Icon(Icons.close, size: 16, color: Colors.black26); // Subtle X
+                boxColor = Colors.transparent;
+                boxBorder = Border.all(
+                  color: colorScheme.outline.withValues(alpha: 0.6),
+                  width: 2,
+                );
+                innerWidget = Icon(
+                  Icons.close,
+                  size: 16,
+                  color: colorScheme.onSurface.withValues(alpha: 0.35),
+                );
                 break;
               case DayState.future:
-                boxColor = Colors.white70;
+                boxColor = colorScheme.surface.withValues(alpha: 0.7);
                 innerWidget = const SizedBox.shrink();
                 break;
             }
@@ -233,8 +273,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  days[index], 
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.black54)
+                  days[index],
+                  style: textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             );
@@ -246,15 +289,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // 3. Challenges Section (Active + Available Carousel)
   Widget _buildChallengesSection() {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "Current Ignition",
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+          style: textTheme.headlineSmall?.copyWith(fontSize: 16),
         ),
         const SizedBox(height: 16),
-        
+
         // Top Card: Active Challenge or Empty State
         _buildActiveChallengeCard(
           title: _activeChallenge["title"],
@@ -264,11 +308,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
 
         const SizedBox(height: 24),
-        
+
         // Bottom List: Side-scrollable Available Challenges
         Text(
           "The Kindling",
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+          style: textTheme.headlineSmall?.copyWith(fontSize: 16),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -296,18 +340,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required double progress,
     required String daysLeft,
   }) {
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.black87,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: _primaryOrange.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 6),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -319,10 +364,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.outfit(
+                  style: textTheme.headlineLarge?.copyWith(
                     color: Colors.white,
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -332,7 +376,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
+            style: textTheme.bodySmall?.copyWith(
+              color: Colors.white70,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 20),
           Row(
@@ -344,17 +391,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     value: progress,
                     minHeight: 6,
                     backgroundColor: Colors.white24,
-                    valueColor: const AlwaysStoppedAnimation<Color>(_primaryOrange),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      _primaryOrange,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               Text(
                 daysLeft,
-                style: GoogleFonts.inter(
+                style: textTheme.labelMedium?.copyWith(
                   color: Colors.white,
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -364,12 +412,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-
   Widget _buildAvailableChallengeCard({
     required String title,
     required String subtitle,
     required String duration,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       width: 220,
       margin: const EdgeInsets.only(right: 16),
@@ -384,25 +433,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: colorScheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               duration,
-              style: GoogleFonts.inter(
+              style: textTheme.labelSmall?.copyWith(
                 fontSize: 11,
+                color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.bold,
-                color: Colors.black54,
               ),
             ),
           ),
           const Spacer(),
           Text(
             title,
-            style: GoogleFonts.outfit(
+            style: textTheme.headlineMedium?.copyWith(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: colorScheme.onSurface,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -410,7 +458,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.black54),
+            style: textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+              color: colorScheme.onSurfaceVariant,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -421,12 +472,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // 4. The Spark Feed
   Widget _buildSparkFeed() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "The Spark Feed",
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+          style: textTheme.headlineSmall?.copyWith(fontSize: 16),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -447,7 +500,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     const CircleAvatar(
                       backgroundColor: _bgColor,
-                      child: Icon(Icons.person, color: Colors.black45),
+                      child: Icon(
+                        Icons.person,
+                        color: AppColors.lightTextSecondary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -457,20 +513,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Text(
                             "Jordan ${index + 1}",
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                            style: textTheme.labelLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          const Text(
+                          Text(
                             "Crushed 45m Push",
-                            style: TextStyle(fontSize: 12, color: Colors.black54),
+                            style: textTheme.bodySmall?.copyWith(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 8),
                           GestureDetector(
                             onTap: () {},
-                            child: const Text(
+                            child: Text(
                               "🔥 Send Spark",
-                              style: TextStyle(
+                              style: textTheme.labelMedium?.copyWith(
                                 color: _primaryOrange,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,

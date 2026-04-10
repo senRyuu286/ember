@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:ember/core/theme/app_colors.dart';
 
 /// ExercisesScreen: Displays the exercise library with search and filtering.
 /// Belongs in features/exercises/ui/
@@ -12,9 +12,9 @@ class ExercisesScreen extends StatefulWidget {
 
 class _ExercisesScreenState extends State<ExercisesScreen> {
   // Brand colors
-  static const Color _bgColor = Color(0xFFDEE1E9);
-  static const Color _primaryOrange = Color(0xFFFA4D1A);
-  static const Color _surfaceColor = Color(0xFFF9FAFF);
+  static const Color _bgColor = AppColors.lightSurfaceVariant;
+  static const Color _primaryOrange = AppColors.primary;
+  static const Color _surfaceColor = AppColors.lightBackground;
 
   // State
   final TextEditingController _searchController = TextEditingController();
@@ -22,8 +22,15 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
   String _searchQuery = "";
 
   // Mock filters & data
-  final List<String> _filters = ["All", "Chest", "Back", "Legs", "Barbell", "Dumbbell"];
-  
+  final List<String> _filters = [
+    "All",
+    "Chest",
+    "Back",
+    "Legs",
+    "Barbell",
+    "Dumbbell",
+  ];
+
   // Added "equipment" to mock data to make all filters functional
   final List<Map<String, String>> _mockExercises = [
     {"name": "Barbell Squat", "muscle": "Legs", "equipment": "Barbell"},
@@ -54,18 +61,19 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
   // Helper to calculate how many exercises belong to a specific filter
   int _getExerciseCountForFilter(String filter) {
     if (filter == "All") return _mockExercises.length;
-    return _mockExercises.where((ex) => 
-      ex["muscle"] == filter || ex["equipment"] == filter
-    ).length;
+    return _mockExercises
+        .where((ex) => ex["muscle"] == filter || ex["equipment"] == filter)
+        .length;
   }
 
   @override
   Widget build(BuildContext context) {
     // Advanced filter logic handling both category and text search
     final filteredExercises = _mockExercises.where((ex) {
-      final matchesFilter = _selectedFilter == "All" || 
-                            ex["muscle"] == _selectedFilter || 
-                            ex["equipment"] == _selectedFilter;
+      final matchesFilter =
+          _selectedFilter == "All" ||
+          ex["muscle"] == _selectedFilter ||
+          ex["equipment"] == _selectedFilter;
       final matchesSearch = ex["name"]!.toLowerCase().contains(_searchQuery);
       return matchesFilter && matchesSearch;
     }).toList();
@@ -77,26 +85,31 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
           children: [
             // 1. Custom Top Bar
             _buildTopBar(),
-            
+
             // 2. Search & Filter Bar
             _buildSearchAndFilters(),
-            
+
             // 3. Categorized List (Body)
             Expanded(
-              child: filteredExercises.isEmpty 
-                ? _buildEmptyState() 
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 100), // Bottom padding for nav bar
-                    itemCount: filteredExercises.length,
-                    itemBuilder: (context, index) {
-                      final exercise = filteredExercises[index];
-                      return _buildExerciseCard(
-                        name: exercise["name"]!,
-                        muscle: exercise["muscle"]!,
-                        equipment: exercise["equipment"]!,
-                      );
-                    },
-                  ),
+              child: filteredExercises.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        20,
+                        8,
+                        20,
+                        100,
+                      ), // Bottom padding for nav bar
+                      itemCount: filteredExercises.length,
+                      itemBuilder: (context, index) {
+                        final exercise = filteredExercises[index];
+                        return _buildExerciseCard(
+                          name: exercise["name"]!,
+                          muscle: exercise["muscle"]!,
+                          equipment: exercise["equipment"]!,
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -105,6 +118,8 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
   }
 
   Widget _buildTopBar() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       child: Row(
@@ -115,16 +130,19 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
             width: 32,
             height: 32,
             errorBuilder: (context, error, stackTrace) {
-              return const Icon(Icons.local_fire_department, color: _primaryOrange, size: 32);
+              return const Icon(
+                Icons.local_fire_department,
+                color: _primaryOrange,
+                size: 32,
+              );
             },
           ),
           const SizedBox(width: 12),
           Text(
             "Exercise Library",
-            style: GoogleFonts.outfit(
+            style: textTheme.displayMedium?.copyWith(
               fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Colors.black87,
+              color: colorScheme.onSurface,
               letterSpacing: -0.5,
             ),
           ),
@@ -133,14 +151,13 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.black87,
+              color: AppColors.darkSurface,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               "${_mockExercises.length} Total",
-              style: GoogleFonts.inter(
+              style: textTheme.labelMedium?.copyWith(
                 fontSize: 12,
-                fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
             ),
@@ -151,9 +168,16 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
   }
 
   Widget _buildSearchAndFilters() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       color: _bgColor,
-      padding: const EdgeInsets.fromLTRB(20, 0, 0, 16), // No right padding so list scrolls to edge
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        0,
+        0,
+        16,
+      ), // No right padding so list scrolls to edge
       child: Column(
         children: [
           // Search Field
@@ -166,7 +190,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: colorScheme.shadow.withValues(alpha: 0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -176,11 +200,22 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: "Search exercises...",
-                  hintStyle: GoogleFonts.inter(fontSize: 14, color: Colors.black38),
-                  prefixIcon: const Icon(Icons.search, size: 20, color: Colors.black45),
+                  hintStyle: textTheme.bodyMedium?.copyWith(
+                    fontSize: 14,
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18, color: Colors.black45),
+                          icon: Icon(
+                            Icons.clear,
+                            size: 18,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                           onPressed: () => _searchController.clear(),
                         )
                       : null,
@@ -191,7 +226,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Filter Chips with Dynamic Counts
           SizedBox(
             height: 40,
@@ -202,7 +237,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                 final filter = _filters[index];
                 final isSelected = _selectedFilter == filter;
                 final count = _getExerciseCountForFilter(filter);
-                
+
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: ChoiceChip(
@@ -211,23 +246,32 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                       children: [
                         Text(
                           filter,
-                          style: GoogleFonts.inter(
-                            color: isSelected ? Colors.white : Colors.black87,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          style: textTheme.labelMedium?.copyWith(
+                            color: isSelected
+                                ? Colors.white
+                                : colorScheme.onSurface,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                         const SizedBox(width: 6),
                         // Pill count badge
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: isSelected ? Colors.white24 : Colors.black12,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             "$count",
-                            style: GoogleFonts.inter(
-                              color: isSelected ? Colors.white : Colors.black54,
+                            style: textTheme.labelSmall?.copyWith(
+                              color: isSelected
+                                  ? Colors.white
+                                  : colorScheme.onSurfaceVariant,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
@@ -239,7 +283,10 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                     selectedColor: _primaryOrange,
                     backgroundColor: Colors.white70,
                     showCheckmark: false,
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
@@ -261,7 +308,13 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
     );
   }
 
-  Widget _buildExerciseCard({required String name, required String muscle, required String equipment}) {
+  Widget _buildExerciseCard({
+    required String name,
+    required String muscle,
+    required String equipment,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -270,7 +323,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
         border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: colorScheme.shadow.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -289,10 +342,9 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
         ),
         title: Text(
           name,
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
+          style: textTheme.headlineMedium?.copyWith(
             fontSize: 18,
-            color: Colors.black87,
+            color: colorScheme.onSurface,
           ),
         ),
         subtitle: Padding(
@@ -308,7 +360,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
         trailing: const Icon(
           Icons.arrow_forward_ios,
           size: 16,
-          color: Colors.black26,
+          color: AppColors.lightTextDisabled,
         ),
         onTap: () {
           // Future: go_router push to exercise details screen passing the ID
@@ -318,16 +370,20 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
   }
 
   Widget _buildTag(String text, {bool isSubtle = false}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isSubtle ? Colors.black.withValues(alpha: 0.05) : _primaryOrange.withValues(alpha: 0.1),
+        color: isSubtle
+            ? Colors.black.withValues(alpha: 0.05)
+            : _primaryOrange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         text,
-        style: GoogleFonts.inter(
-          color: isSubtle ? Colors.black54 : _primaryOrange,
+        style: textTheme.labelSmall?.copyWith(
+          color: isSubtle ? colorScheme.onSurfaceVariant : _primaryOrange,
           fontSize: 11,
           fontWeight: FontWeight.bold,
         ),
@@ -336,24 +392,32 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
   }
 
   Widget _buildEmptyState() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off, size: 48, color: Colors.black26),
+          Icon(
+            Icons.search_off,
+            size: 48,
+            color: colorScheme.onSurface.withValues(alpha: 0.25),
+          ),
           const SizedBox(height: 16),
           Text(
             "No exercises found",
-            style: GoogleFonts.outfit(
+            style: textTheme.headlineMedium?.copyWith(
               fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             "Try adjusting your search or filter.",
-            style: GoogleFonts.inter(color: Colors.black38, fontSize: 14),
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+              fontSize: 14,
+            ),
           ),
         ],
       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:ember/core/theme/app_colors.dart';
 
 // Assuming these are your actual imports in your project
 import 'package:ember/features/auth/providers/auth_provider.dart';
@@ -23,9 +23,12 @@ enum ThemePreference { system, light, dark }
 extension FitnessLevelLabel on FitnessLevel {
   String get label {
     switch (this) {
-      case FitnessLevel.beginner: return 'Beginner';
-      case FitnessLevel.intermediate: return 'Intermediate';
-      case FitnessLevel.advanced: return 'Advanced';
+      case FitnessLevel.beginner:
+        return 'Beginner';
+      case FitnessLevel.intermediate:
+        return 'Intermediate';
+      case FitnessLevel.advanced:
+        return 'Advanced';
     }
   }
 }
@@ -33,11 +36,16 @@ extension FitnessLevelLabel on FitnessLevel {
 extension PrimaryGoalLabel on PrimaryGoal {
   String get label {
     switch (this) {
-      case PrimaryGoal.buildMuscle: return 'Build Muscle';
-      case PrimaryGoal.loseFat: return 'Lose Fat';
-      case PrimaryGoal.gainStrength: return 'Gain Strength';
-      case PrimaryGoal.improveEndurance: return 'Improve Endurance';
-      case PrimaryGoal.generalFitness: return 'General Fitness';
+      case PrimaryGoal.buildMuscle:
+        return 'Build Muscle';
+      case PrimaryGoal.loseFat:
+        return 'Lose Fat';
+      case PrimaryGoal.gainStrength:
+        return 'Gain Strength';
+      case PrimaryGoal.improveEndurance:
+        return 'Improve Endurance';
+      case PrimaryGoal.generalFitness:
+        return 'General Fitness';
     }
   }
 }
@@ -45,8 +53,10 @@ extension PrimaryGoalLabel on PrimaryGoal {
 extension UnitSystemLabel on UnitSystem {
   String get label {
     switch (this) {
-      case UnitSystem.lbsMi: return 'lbs / mi';
-      case UnitSystem.kgKm: return 'kg / km';
+      case UnitSystem.lbsMi:
+        return 'lbs / mi';
+      case UnitSystem.kgKm:
+        return 'kg / km';
     }
   }
 }
@@ -54,9 +64,12 @@ extension UnitSystemLabel on UnitSystem {
 extension ThemePreferenceLabel on ThemePreference {
   String get label {
     switch (this) {
-      case ThemePreference.system: return 'System';
-      case ThemePreference.light: return 'Light';
-      case ThemePreference.dark: return 'Dark';
+      case ThemePreference.system:
+        return 'System';
+      case ThemePreference.light:
+        return 'Light';
+      case ThemePreference.dark:
+        return 'Dark';
     }
   }
 }
@@ -70,8 +83,8 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // Brand Colors (Aligned with Ember Theme)
-  static const Color _bgColor = Color(0xFFDEE1E9);
-  static const Color _primaryOrange = Color(0xFFFA4D1A);
+  static const Color _bgColor = AppColors.lightSurfaceVariant;
+  static const Color _primaryOrange = AppColors.primary;
 
   bool _isEditing = false;
   bool _notificationsEnabled = true;
@@ -96,11 +109,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       value: '42',
       label: 'Workouts',
     ),
-    _MetricData(
-      icon: Icons.bolt_rounded,
-      value: '1,280',
-      label: 'Ember XP',
-    ),
+    _MetricData(icon: Icons.bolt_rounded, value: '1,280', label: 'Ember XP'),
     _MetricData(
       icon: Icons.emoji_events_rounded,
       value: '3',
@@ -112,30 +121,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Log Out',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.headlineLarge,
         ),
         content: Text(
           'Are you sure you want to log out?',
-          style: GoogleFonts.inter(fontSize: 14),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.black54)),
+            child: Text(
+              'Cancel',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFC91A25),
-            ),
+            style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
             child: Text(
               'Log Out',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -156,9 +168,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('Failed to log out. Please try again.'),
-          ),
+          const SnackBar(content: Text('Failed to log out. Please try again.')),
         );
       return;
     }
@@ -180,7 +190,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 _buildTopBar(),
                 const SizedBox(height: 24),
-                
+
                 // ── Identity Card (High Contrast Ember Style) ──
                 _IdentityCard(
                   userName: _userName,
@@ -191,7 +201,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     HapticFeedback.lightImpact();
                     setState(() => _isEditing = !_isEditing);
                   },
-                  onLevelChanged: (level) => setState(() => _fitnessLevel = level),
+                  onLevelChanged: (level) =>
+                      setState(() => _fitnessLevel = level),
                 ),
                 const SizedBox(height: 24),
 
@@ -202,9 +213,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     scrollDirection: Axis.horizontal,
                     itemCount: _metrics.length,
                     separatorBuilder: (_, _) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) => _MetricChip(
-                      data: _metrics[index],
-                    ),
+                    itemBuilder: (context, index) =>
+                        _MetricChip(data: _metrics[index]),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -223,7 +233,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               value: _primaryGoal,
                               items: PrimaryGoal.values,
                               labelOf: (g) => g.label,
-                              onChanged: (g) => setState(() => _primaryGoal = g),
+                              onChanged: (g) =>
+                                  setState(() => _primaryGoal = g),
                             )
                           : _ValueLabel(label: _primaryGoal.label),
                     ),
@@ -261,17 +272,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           children: [
                             Text(
                               '${_restTimerSeconds}s',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black54,
-                              ),
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
                             ),
                             const SizedBox(width: 2),
-                            const Icon(
+                            Icon(
                               Icons.expand_more_rounded,
                               size: 18,
-                              color: Colors.black54,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ],
                         ),
@@ -329,7 +345,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _ActionTile(
                       icon: Icons.gavel_rounded,
                       title: 'Terms and Conditions',
-                      onTap: () => _showActionMessage('Open Terms & Conditions'),
+                      onTap: () =>
+                          _showActionMessage('Open Terms & Conditions'),
                     ),
                     _ActionTile(
                       icon: Icons.help_outline_rounded,
@@ -346,7 +363,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ],
                 ),
-                
+
                 // Bottom Padding for Nav Bar
                 const SizedBox(height: 100),
               ],
@@ -365,16 +382,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           width: 32,
           height: 32,
           errorBuilder: (context, error, stackTrace) {
-            return const Icon(Icons.local_fire_department, color: _primaryOrange, size: 32);
+            return const Icon(
+              Icons.local_fire_department,
+              color: _primaryOrange,
+              size: 32,
+            );
           },
         ),
         const SizedBox(width: 12),
         Text(
           "Profile",
-          style: GoogleFonts.outfit(
+          style: Theme.of(context).textTheme.displayMedium?.copyWith(
             fontSize: 28,
-            fontWeight: FontWeight.w800,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
         ),
@@ -410,14 +430,14 @@ class _IdentityCard extends StatelessWidget {
   final VoidCallback onEditToggle;
   final ValueChanged<FitnessLevel> onLevelChanged;
 
-  static const Color _primaryOrange = Color(0xFFFA4D1A);
+  static const Color _primaryOrange = AppColors.primary;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.black87, // High contrast Ember feel
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -439,10 +459,7 @@ class _IdentityCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _primaryOrange.withValues(alpha: 0.12),
-                  border: Border.all(
-                    color: _primaryOrange,
-                    width: 2,
-                  ),
+                  border: Border.all(color: _primaryOrange, width: 2),
                 ),
                 child: const Icon(
                   Icons.person_rounded,
@@ -457,20 +474,23 @@ class _IdentityCard extends StatelessWidget {
                   children: [
                     Text(
                       userName,
-                      style: GoogleFonts.outfit(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: -0.3,
-                      ),
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            fontSize: 22,
+                            color: Colors.white,
+                            letterSpacing: -0.3,
+                          ),
                     ),
                     const SizedBox(height: 6),
                     if (isEditing)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white12,
-                          borderRadius: BorderRadius.circular(8)
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: _CompactDropdown<FitnessLevel>(
                           value: fitnessLevel,
@@ -498,7 +518,7 @@ class _IdentityCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             userBio,
-            style: GoogleFonts.inter(
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 13,
               color: Colors.white70,
               height: 1.5,
@@ -514,7 +534,7 @@ class _LevelBadge extends StatelessWidget {
   const _LevelBadge({required this.label});
   final String label;
 
-  static const Color _primaryOrange = Color(0xFFFA4D1A);
+  static const Color _primaryOrange = AppColors.primary;
 
   @override
   Widget build(BuildContext context) {
@@ -526,7 +546,7 @@ class _LevelBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.inter(
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: _primaryOrange,
@@ -541,7 +561,7 @@ class _EditButton extends StatelessWidget {
   final bool isEditing;
   final VoidCallback onTap;
 
-  static const Color _primaryOrange = Color(0xFFFA4D1A);
+  static const Color _primaryOrange = AppColors.primary;
 
   @override
   Widget build(BuildContext context) {
@@ -556,7 +576,7 @@ class _EditButton extends StatelessWidget {
         ),
         child: Text(
           isEditing ? 'Done' : 'Edit',
-          style: GoogleFonts.inter(
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
             fontSize: 13,
             fontWeight: FontWeight.w700,
             color: Colors.white,
@@ -582,8 +602,8 @@ class _MetricChip extends StatelessWidget {
   const _MetricChip({required this.data});
   final _MetricData data;
 
-  static const Color _primaryOrange = Color(0xFFFA4D1A);
-  static const Color _surfaceColor = Color(0xFFF9FAFF);
+  static const Color _primaryOrange = AppColors.primary;
+  static const Color _surfaceColor = AppColors.lightBackground;
 
   @override
   Widget build(BuildContext context) {
@@ -620,19 +640,18 @@ class _MetricChip extends StatelessWidget {
             children: [
               Text(
                 data.value,
-                style: GoogleFonts.outfit(
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                   letterSpacing: -0.5,
                 ),
               ),
               Text(
                 data.label,
-                style: GoogleFonts.inter(
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black54,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -658,8 +677,8 @@ class _SectionContainer extends StatelessWidget {
   final List<Widget> children;
   final String? subtitle;
 
-  static const Color _primaryOrange = Color(0xFFFA4D1A);
-  static const Color _surfaceColor = Color(0xFFF9FAFF);
+  static const Color _primaryOrange = AppColors.primary;
+  static const Color _surfaceColor = AppColors.lightBackground;
 
   @override
   Widget build(BuildContext context) {
@@ -691,18 +710,18 @@ class _SectionContainer extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontSize: 18,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                     ),
                     if (subtitle != null)
                       Text(
                         subtitle!,
-                        style: GoogleFonts.inter(
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 12,
-                          color: Colors.black45,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                   ],
@@ -745,15 +764,19 @@ class _PreferenceTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
-              Icon(icon, color: Colors.black54, size: 20),
+              Icon(
+                icon,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 20,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -791,9 +814,13 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const destructiveColor = Color(0xFFC91A25);
-    final iconColor = isDestructive ? destructiveColor : Colors.black54;
-    final titleColor = isDestructive ? destructiveColor : Colors.black87;
+    const destructiveColor = AppColors.secondary;
+    final iconColor = isDestructive
+        ? destructiveColor
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+    final titleColor = isDestructive
+        ? destructiveColor
+        : Theme.of(context).colorScheme.onSurface;
 
     return Column(
       children: [
@@ -814,7 +841,7 @@ class _ActionTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: titleColor,
@@ -859,10 +886,10 @@ class _ValueLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: GoogleFonts.inter(
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: Colors.black54,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }
@@ -874,7 +901,7 @@ class _CompactDropdown<T> extends StatelessWidget {
     required this.items,
     required this.labelOf,
     required this.onChanged,
-    this.textColor = const Color(0xFFFA4D1A), // Defaults to primaryOrange
+    this.textColor = AppColors.primary,
   });
 
   final T value;
@@ -890,24 +917,22 @@ class _CompactDropdown<T> extends StatelessWidget {
         value: value,
         borderRadius: BorderRadius.circular(14),
         isDense: true,
-        dropdownColor: const Color(0xFFF9FAFF), // _surfaceColor
-        style: GoogleFonts.inter(
+        dropdownColor: AppColors.lightBackground,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: textColor,
         ),
-        icon: Icon(
-          Icons.expand_more_rounded,
-          size: 16,
-          color: textColor,
-        ),
+        icon: Icon(Icons.expand_more_rounded, size: 16, color: textColor),
         items: items
             .map(
               (item) => DropdownMenuItem<T>(
                 value: item,
                 child: Text(
                   labelOf(item),
-                  style: GoogleFonts.inter(color: Colors.black87), // Fix dropdown list text color
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
             )

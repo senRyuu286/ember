@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:ember/core/theme/app_colors.dart';
 
 /// HistoryScreen: Displays past workouts and a weekly/monthly overview.
 /// Belongs in features/history/ui/
@@ -11,9 +11,9 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  static const Color _bgColor = Color(0xFFDEE1E9);
-  static const Color _primaryOrange = Color(0xFFFA4D1A);
-  static const Color _surfaceColor = Color(0xFFF9FAFF);
+  static const Color _bgColor = AppColors.lightSurfaceVariant;
+  static const Color _primaryOrange = AppColors.primary;
+  static const Color _surfaceColor = AppColors.lightBackground;
 
   String _selectedFilter = "All";
   final List<String> _filters = ["All", "Templates", "Custom", "PRs Only"];
@@ -68,7 +68,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 padding: const EdgeInsets.all(20.0),
                 child: _buildTopBar(),
               ),
-              
+
               // Summary Analytics
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -88,11 +88,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   children: [
                     Text(
                       "The Logbook",
-                      style: GoogleFonts.outfit(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            fontSize: 22,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                     ),
                     const SizedBox(height: 16),
                     _buildFilters(),
@@ -136,6 +136,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   // 1. Consistent Top Bar
   Widget _buildTopBar() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Row(
       children: [
         Image.asset(
@@ -143,16 +145,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
           width: 32,
           height: 32,
           errorBuilder: (context, error, stackTrace) {
-            return const Icon(Icons.local_fire_department, color: _primaryOrange, size: 32);
+            return const Icon(
+              Icons.local_fire_department,
+              color: _primaryOrange,
+              size: 32,
+            );
           },
         ),
         const SizedBox(width: 12),
         Text(
           "Burn History",
-          style: GoogleFonts.outfit(
+          style: textTheme.displayMedium?.copyWith(
             fontSize: 28,
-            fontWeight: FontWeight.w800,
-            color: Colors.black87,
+            color: colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
         ),
@@ -164,7 +169,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget _buildSummaryStats() {
     return Row(
       children: [
-        Expanded(child: _buildStatCard("Volume", "31.8k lbs", Icons.fitness_center)),
+        Expanded(
+          child: _buildStatCard("Volume", "31.8k lbs", Icons.fitness_center),
+        ),
         const SizedBox(width: 12),
         Expanded(child: _buildStatCard("Workouts", "12", Icons.bolt)),
         const SizedBox(width: 12),
@@ -174,10 +181,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildStatCard(String label, String value, IconData icon) {
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black87,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -194,10 +202,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.outfit(
+            style: textTheme.headlineMedium?.copyWith(
               color: Colors.white,
               fontSize: 16,
-              fontWeight: FontWeight.bold,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -205,10 +212,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           const SizedBox(height: 2),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: textTheme.labelSmall?.copyWith(
               color: Colors.white70,
               fontSize: 11,
-              fontWeight: FontWeight.w500,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -220,6 +226,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   // 3. Weekly Overview (Kept your design, just tweaked colors)
   Widget _buildWeekView() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final days = ["M", "T", "W", "T", "F", "S", "S"];
     final dates = ["5", "6", "7", "8", "9", "10", "11"];
     final activeDays = [false, true, true, false, true, false, false];
@@ -238,28 +246,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
             width: 60,
             margin: const EdgeInsets.symmetric(horizontal: 4),
             decoration: BoxDecoration(
-              color: isToday ? Colors.black87 : _surfaceColor,
+              color: isToday ? AppColors.darkSurface : _surfaceColor,
               borderRadius: BorderRadius.circular(20),
-              border: isToday ? null : Border.all(color: Colors.white, width: 2),
+              border: isToday
+                  ? null
+                  : Border.all(color: Colors.white, width: 2),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   days[index],
-                  style: GoogleFonts.inter(
-                    color: isToday ? Colors.white70 : Colors.black54,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: isToday
+                        ? Colors.white70
+                        : colorScheme.onSurfaceVariant,
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   dates[index],
-                  style: GoogleFonts.outfit(
-                    color: isToday ? Colors.white : Colors.black87,
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: isToday ? Colors.white : colorScheme.onSurface,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -281,6 +291,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   // 4. Filter Row
   Widget _buildFilters() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return SizedBox(
       height: 40,
       child: ListView.builder(
@@ -289,14 +301,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
         itemBuilder: (context, index) {
           final filter = _filters[index];
           final isSelected = _selectedFilter == filter;
-          
+
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ChoiceChip(
               label: Text(
                 filter,
-                style: GoogleFonts.inter(
-                  color: isSelected ? Colors.white : Colors.black87,
+                style: textTheme.labelMedium?.copyWith(
+                  color: isSelected ? Colors.white : colorScheme.onSurface,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
@@ -330,6 +342,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     required String duration,
     required bool isPR,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return InkWell(
       onTap: () {
         // Future: go_router navigation to detailed history view
@@ -343,7 +357,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           border: Border.all(color: Colors.white, width: 2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: colorScheme.shadow.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -357,29 +371,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
               children: [
                 Text(
                   date,
-                  style: GoogleFonts.inter(
+                  style: textTheme.labelMedium?.copyWith(
                     fontSize: 13,
                     color: _primaryOrange,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 if (isPR)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                      color: AppColors.accent.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.emoji_events, size: 14, color: Color(0xFFB8860B)),
+                        const Icon(
+                          Icons.emoji_events,
+                          size: 14,
+                          color: AppColors.accent,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           "New PR",
-                          style: GoogleFonts.inter(
+                          style: textTheme.labelSmall?.copyWith(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFFB8860B),
+                            color: AppColors.accent,
                           ),
                         ),
                       ],
@@ -390,10 +410,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
             const SizedBox(height: 8),
             Text(
               name,
-              style: GoogleFonts.outfit(
+              style: textTheme.headlineLarge?.copyWith(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -410,9 +429,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   },
                   style: IconButton.styleFrom(
                     backgroundColor: _bgColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  icon: const Icon(Icons.replay, color: Colors.black87, size: 20),
+                  icon: Icon(
+                    Icons.replay,
+                    color: colorScheme.onSurface,
+                    size: 20,
+                  ),
                   tooltip: "Repeat Burn",
                 ),
               ],
@@ -424,15 +449,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildStatBadge(IconData icon, String label) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.black45),
+        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
         const SizedBox(width: 4),
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: textTheme.bodyMedium?.copyWith(
             fontSize: 14,
-            color: Colors.black54,
+            color: colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -442,25 +469,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   // 6. Beautiful Empty State
   Widget _buildEmptyState() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.only(top: 40.0),
       child: Center(
         child: Column(
           children: [
-            const Icon(Icons.history_toggle_off, size: 56, color: Colors.black26),
+            Icon(
+              Icons.history_toggle_off,
+              size: 56,
+              color: colorScheme.onSurface.withValues(alpha: 0.25),
+            ),
             const SizedBox(height: 16),
             Text(
               "No embers burning yet.",
-              style: GoogleFonts.outfit(
+              style: textTheme.headlineLarge?.copyWith(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black54,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               "Complete a workout to log your progress.",
-              style: GoogleFonts.inter(color: Colors.black38, fontSize: 14),
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+                fontSize: 14,
+              ),
             ),
           ],
         ),
