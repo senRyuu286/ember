@@ -30,7 +30,6 @@ class _EmberState extends ConsumerState<Ember> {
 
   @override
   Widget build(BuildContext context) {
-    // Read once — never watch. The router must never be recreated.
     final router = ref.read(appRouterProvider);
 
     return MaterialApp.router(

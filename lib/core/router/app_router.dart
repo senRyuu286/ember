@@ -12,6 +12,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'app_routes.dart';
 
+// Routes that are accessible without an authenticated session.
+const _publicRoutes = {
+  AppRoutes.splash,
+  AppRoutes.welcome,
+  AppRoutes.signIn,
+  AppRoutes.signUp,
+  AppRoutes.checkEmail,
+  AppRoutes.forgotPassword,
+  AppRoutes.profileSetup,
+};
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
@@ -34,6 +45,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // In-memory flag set during the current signup flow
       if (needsProfileSetup) return AppRoutes.profileSetup;
+
+      final isAuthenticated =
+          authState.asData?.value.session != null;
+      final isOnPublicRoute = _publicRoutes.contains(currentPath);
+
+      // Signed-out user trying to access a protected route → welcome
+      if (!isAuthenticated && !isOnPublicRoute) {
+        return AppRoutes.welcome;
+      }
 
       return null;
     },
@@ -79,7 +99,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
 class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(Ref ref) {
-    ref.listen(authStateProvider, (_, __) => notifyListeners());
-    ref.listen(needsProfileSetupProvider, (_, __) => notifyListeners());
+    ref.listen(authStateProvider, (_, _) => notifyListeners());
+    ref.listen(needsProfileSetupProvider, (_, _) => notifyListeners());
   }
 }

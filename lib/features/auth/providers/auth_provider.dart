@@ -134,3 +134,19 @@ final currentProfileProvider =
   if (user == null) return null;
   return await ref.read(authRepositoryProvider).getProfile();
 });
+
+// Sign out
+final signOutNotifierProvider =
+    AsyncNotifierProvider<SignOutNotifier, void>(SignOutNotifier.new);
+
+class SignOutNotifier extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  Future<void> signOut() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(authRepositoryProvider).signOut();
+    });
+  }
+}

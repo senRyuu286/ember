@@ -1,4 +1,9 @@
 import 'package:ember/core/theme/app_colors.dart';
+import 'package:ember/features/dashboard/ui/dashboard_screen.dart';
+import 'package:ember/features/workouts/ui/workouts_screen.dart';
+import 'package:ember/features/exercises/ui/exercises_screen.dart';
+import 'package:ember/features/history/ui/history_screen.dart';
+import 'package:ember/features/profile/ui/profile_screen.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -39,12 +44,13 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   ];
 
+  // Replaced placeholders with actual feature screens
   static const List<Widget> _screens = [
-    _PlaceholderScreen(label: 'Dashboard'),
-    _PlaceholderScreen(label: 'Workouts'),
-    _PlaceholderScreen(label: 'Exercises'),
-    _PlaceholderScreen(label: 'History'),
-    _PlaceholderScreen(label: 'Profile'),
+    DashboardScreen(),
+    WorkoutsScreen(),
+    ExercisesScreen(),
+    HistoryScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -55,10 +61,8 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(milliseconds: 220),
         switchInCurve: Curves.easeOut,
         switchOutCurve: Curves.easeIn,
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
         child: KeyedSubtree(
           key: ValueKey<int>(_currentIndex),
           child: _screens[_currentIndex],
@@ -91,7 +95,7 @@ class _FloatingNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
         child: Container(
           height: 64,
           decoration: BoxDecoration(
@@ -123,9 +127,7 @@ class _FloatingNavBar extends StatelessWidget {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primary
-                        : Colors.transparent,
+                    color: isSelected ? AppColors.primary : Colors.transparent,
                     borderRadius: BorderRadius.circular(32),
                   ),
                   child: Row(
@@ -180,42 +182,4 @@ class _NavDestination {
     required this.selectedIcon,
     required this.label,
   });
-}
-
-// Placeholder tab screen — replace each one as real screens are built
-class _PlaceholderScreen extends StatelessWidget {
-  final String label;
-
-  const _PlaceholderScreen({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: Text(label),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.construction_rounded,
-              size: 48,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '$label screen coming soon',
-              style: textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
