@@ -2,77 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ember/core/theme/app_colors.dart';
-
-// Assuming these are your actual imports in your project
 import 'package:ember/features/auth/providers/auth_provider.dart';
-
-enum FitnessLevel { beginner, intermediate, advanced }
-
-enum PrimaryGoal {
-  buildMuscle,
-  loseFat,
-  gainStrength,
-  improveEndurance,
-  generalFitness,
-}
-
-enum UnitSystem { lbsMi, kgKm }
-
-enum ThemePreference { system, light, dark }
-
-extension FitnessLevelLabel on FitnessLevel {
-  String get label {
-    switch (this) {
-      case FitnessLevel.beginner:
-        return 'Beginner';
-      case FitnessLevel.intermediate:
-        return 'Intermediate';
-      case FitnessLevel.advanced:
-        return 'Advanced';
-    }
-  }
-}
-
-extension PrimaryGoalLabel on PrimaryGoal {
-  String get label {
-    switch (this) {
-      case PrimaryGoal.buildMuscle:
-        return 'Build Muscle';
-      case PrimaryGoal.loseFat:
-        return 'Lose Fat';
-      case PrimaryGoal.gainStrength:
-        return 'Gain Strength';
-      case PrimaryGoal.improveEndurance:
-        return 'Improve Endurance';
-      case PrimaryGoal.generalFitness:
-        return 'General Fitness';
-    }
-  }
-}
-
-extension UnitSystemLabel on UnitSystem {
-  String get label {
-    switch (this) {
-      case UnitSystem.lbsMi:
-        return 'lbs / mi';
-      case UnitSystem.kgKm:
-        return 'kg / km';
-    }
-  }
-}
-
-extension ThemePreferenceLabel on ThemePreference {
-  String get label {
-    switch (this) {
-      case ThemePreference.system:
-        return 'System';
-      case ThemePreference.light:
-        return 'Light';
-      case ThemePreference.dark:
-        return 'Dark';
-    }
-  }
-}
+import 'package:ember/features/profile/data/profile_models.dart';
+import 'package:ember/features/profile/providers/profile_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -82,40 +14,189 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  // Brand Colors (Aligned with Ember Theme)
-  static const Color _bgColor = AppColors.lightSurfaceVariant;
   static const Color _primaryOrange = AppColors.primary;
 
   bool _isEditing = false;
-  bool _notificationsEnabled = true;
-  FitnessLevel _fitnessLevel = FitnessLevel.intermediate;
-  PrimaryGoal _primaryGoal = PrimaryGoal.improveEndurance;
-  UnitSystem _unitSystem = UnitSystem.lbsMi;
-  int _restTimerSeconds = 60;
-  ThemePreference _themePreference = ThemePreference.system;
+  late TextEditingController _bioController;
+  FitnessLevel? _editingFitnessLevel;
+  bool _controllersInitialized = false;
 
-  static const String _userName = 'Alex Fitness';
-  static const String _userBio =
-      'Training for the 2026 Mandaue marathon, one fiery run at a time.';
+  @override
+  void initState() {
+    super.initState();
+    _bioController = TextEditingController();
+  }
 
-  static const _metrics = [
-    _MetricData(
-      icon: Icons.local_fire_department_rounded,
-      value: '18',
-      label: 'Streak Days',
-    ),
-    _MetricData(
-      icon: Icons.fitness_center_rounded,
-      value: '42',
-      label: 'Workouts',
-    ),
-    _MetricData(icon: Icons.bolt_rounded, value: '1,280', label: 'Ember XP'),
-    _MetricData(
-      icon: Icons.emoji_events_rounded,
-      value: '3',
-      label: 'PRs This Month',
-    ),
-  ];
+  @override
+  void dispose() {
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  void _initFromProfile(UserProfile profile) {
+    if (_controllersInitialized) return;
+    _controllersInitialized = true;
+    _bioController.text = profile.bio ?? '';
+    _editingFitnessLevel = profile.fitnessLevel;
+  }
+
+  Future<void> _handleDone(UserProfile profile) async {
+    HapticFeedback.mediumImpact();
+    setState(() => _isEditing = false);
+
+    await ref.read(userProfileProvider.notifier).saveEditableFields(
+          bio: _bioController.text.trim(),
+          fitnessLevel: _editingFitnessLevel ?? profile.fitnessLevel,
+        );
+  }
+
+  void _showAvatarPicker(String currentAvatarId) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Text(
+                'Choose Avatar',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontSize: 18,
+                      color: colorScheme.onSurface,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Tap one to update your profile picture.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 20),
+
+              // Avatar grid -- StatefulBuilder so selection state is local
+              // to the sheet without rebuilding the whole screen.
+              StatefulBuilder(
+                builder: (context, setSheetState) {
+                  String selectedId = currentAvatarId;
+
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: 12,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1,
+                    ),
+                    itemBuilder: (context, index) {
+                      final avatarId = '${index + 1}';
+                      final isSelected = selectedId == avatarId;
+
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setSheetState(() => selectedId = avatarId);
+
+                          // Save immediately and close the sheet.
+                          ref
+                              .read(userProfileProvider.notifier)
+                              .updatePreference(avatarId: avatarId);
+
+                          Navigator.of(context).pop();
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? _primaryOrange
+                                  : Colors.transparent,
+                              width: 2.5,
+                            ),
+                          ),
+                          child: Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(9.5),
+                                child: Image.asset(
+                                  'assets/avatars/avatar_$avatarId.png',
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (_, _, _) => Container(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    child: Icon(
+                                      Icons.person_rounded,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                Positioned(
+                                  top: 6,
+                                  right: 6,
+                                  child: Container(
+                                    width: 18,
+                                    height: 18,
+                                    decoration: const BoxDecoration(
+                                      color: _primaryOrange,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.check_rounded,
+                                      size: 12,
+                                      color: AppColors.white,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+
+              // Safe area bottom padding
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   Future<void> _handleLogOut() async {
     final confirmed = await showDialog<bool>(
@@ -128,7 +209,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         content: Text(
           'Are you sure you want to log out?',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14),
+          style:
+              Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14),
         ),
         actions: [
           TextButton(
@@ -136,8 +218,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Text(
               'Cancel',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ),
           TextButton(
@@ -145,9 +227,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
             child: Text(
               'Log Out',
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -159,247 +242,404 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     HapticFeedback.mediumImpact();
 
+    await ref.read(profileLocalRepositoryProvider).clearProfile();
     await ref.read(signOutNotifierProvider.notifier).signOut();
+  }
 
-    if (!mounted) return;
-
-    final signOutState = ref.read(signOutNotifierProvider);
-    if (signOutState.hasError) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Failed to log out. Please try again.')),
-        );
-      return;
-    }
+  void _showAboutDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: _primaryOrange.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Image.asset(
+                'assets/logo/logo-primary@2x.png',
+                width: 36,
+                height: 36,
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.local_fire_department,
+                  color: _primaryOrange,
+                  size: 36,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Ember',
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontSize: 22,
+                    letterSpacing: -0.3,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Version 1.0.0',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Ember is your free, offline-capable workout companion. '
+              'Plan your training, track your progress, and build the '
+              'habit — one session at a time.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '© 2025 Ember. All rights reserved.',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: 0.6),
+                  ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Close',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: _primaryOrange,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final profileAsync = ref.watch(userProfileProvider);
     final isSigningOut = ref.watch(signOutNotifierProvider).isLoading;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
+    final overlayStyle =
+        isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark,
+      value: overlayStyle,
       child: Scaffold(
-        backgroundColor: _bgColor,
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildTopBar(),
-                const SizedBox(height: 24),
-
-                // ── Identity Card (High Contrast Ember Style) ──
-                _IdentityCard(
-                  userName: _userName,
-                  userBio: _userBio,
-                  fitnessLevel: _fitnessLevel,
-                  isEditing: _isEditing,
-                  onEditToggle: () {
-                    HapticFeedback.lightImpact();
-                    setState(() => _isEditing = !_isEditing);
-                  },
-                  onLevelChanged: (level) =>
-                      setState(() => _fitnessLevel = level),
-                ),
-                const SizedBox(height: 24),
-
-                // ── Metrics Row ──
-                SizedBox(
-                  height: 104,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _metrics.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) =>
-                        _MetricChip(data: _metrics[index]),
+          child: profileAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Failed to load profile.'),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => ref.invalidate(userProfileProvider),
+                    child: const Text('Retry'),
                   ),
-                ),
-                const SizedBox(height: 32),
-
-                // ── Preferences Section ──
-                _SectionContainer(
-                  title: 'Preferences',
-                  subtitle: 'Personal defaults for your sessions',
-                  icon: Icons.tune_rounded,
-                  children: [
-                    _PreferenceTile(
-                      icon: Icons.track_changes_rounded,
-                      title: 'Primary Goal',
-                      trailing: _isEditing
-                          ? _CompactDropdown<PrimaryGoal>(
-                              value: _primaryGoal,
-                              items: PrimaryGoal.values,
-                              labelOf: (g) => g.label,
-                              onChanged: (g) =>
-                                  setState(() => _primaryGoal = g),
-                            )
-                          : _ValueLabel(label: _primaryGoal.label),
-                    ),
-                    _PreferenceTile(
-                      icon: Icons.monitor_weight_rounded,
-                      title: 'Unit System',
-                      trailing: _CompactDropdown<UnitSystem>(
-                        value: _unitSystem,
-                        items: UnitSystem.values,
-                        labelOf: (s) => s.label,
-                        onChanged: (s) => setState(() => _unitSystem = s),
-                      ),
-                    ),
-                    _PreferenceTile(
-                      icon: Icons.timer_rounded,
-                      title: 'Rest Timer',
-                      trailing: PopupMenuButton<int>(
-                        initialValue: _restTimerSeconds,
-                        onSelected: (s) {
-                          HapticFeedback.selectionClick();
-                          setState(() => _restTimerSeconds = s);
-                        },
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: 30, child: Text('30 s')),
-                          PopupMenuItem(value: 45, child: Text('45 s')),
-                          PopupMenuItem(value: 60, child: Text('60 s')),
-                          PopupMenuItem(value: 90, child: Text('90 s')),
-                          PopupMenuItem(value: 120, child: Text('120 s')),
-                        ],
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${_restTimerSeconds}s',
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                            const SizedBox(width: 2),
-                            Icon(
-                              Icons.expand_more_rounded,
-                              size: 18,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    _PreferenceTile(
-                      icon: Icons.palette_rounded,
-                      title: 'Theme',
-                      showDivider: false,
-                      trailing: _CompactDropdown<ThemePreference>(
-                        value: _themePreference,
-                        items: ThemePreference.values,
-                        labelOf: (t) => t.label,
-                        onChanged: (t) => setState(() => _themePreference = t),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // ── Notifications Section ──
-                _SectionContainer(
-                  title: 'Notifications',
-                  subtitle: 'Control what gets surfaced to you',
-                  icon: Icons.notifications_active_rounded,
-                  children: [
-                    _PreferenceTile(
-                      icon: Icons.notifications_active_rounded,
-                      title: 'Pop-up Notification',
-                      showDivider: false,
-                      trailing: Switch.adaptive(
-                        value: _notificationsEnabled,
-                        activeThumbColor: _primaryOrange,
-                        onChanged: (val) {
-                          HapticFeedback.lightImpact();
-                          setState(() => _notificationsEnabled = val);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // ── Actions Section ──
-                _SectionContainer(
-                  title: 'Actions',
-                  subtitle: 'Legal and support quick links',
-                  icon: Icons.flash_on_rounded,
-                  children: [
-                    _ActionTile(
-                      icon: Icons.privacy_tip_outlined,
-                      title: 'Privacy Options',
-                      onTap: () => _showActionMessage('Open Privacy Options'),
-                    ),
-                    _ActionTile(
-                      icon: Icons.gavel_rounded,
-                      title: 'Terms and Conditions',
-                      onTap: () =>
-                          _showActionMessage('Open Terms & Conditions'),
-                    ),
-                    _ActionTile(
-                      icon: Icons.help_outline_rounded,
-                      title: 'Help & Support',
-                      onTap: () => _showActionMessage('Open Help & Support'),
-                    ),
-                    _ActionTile(
-                      icon: Icons.logout_rounded,
-                      title: 'Log Out',
-                      isDestructive: true,
-                      isLoading: isSigningOut,
-                      showDivider: false,
-                      onTap: isSigningOut ? () {} : _handleLogOut,
-                    ),
-                  ],
-                ),
-
-                // Bottom Padding for Nav Bar
-                const SizedBox(height: 100),
-              ],
+                ],
+              ),
             ),
+            data: (profile) {
+              if (profile == null) {
+                return const Center(child: Text('No profile found.'));
+              }
+
+              _initFromProfile(profile);
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTopBar(context),
+                    const SizedBox(height: 24),
+
+                    _IdentityCard(
+                      username: profile.username ?? '',
+                      avatarId: profile.avatarId,
+                      bio: _isEditing ? null : (profile.bio ?? ''),
+                      bioController: _bioController,
+                      fitnessLevel: _isEditing
+                          ? (_editingFitnessLevel ?? profile.fitnessLevel)
+                          : profile.fitnessLevel,
+                      isEditing: _isEditing,
+                      onEditToggle: () {
+                        if (_isEditing) {
+                          _handleDone(profile);
+                        } else {
+                          _editingFitnessLevel = profile.fitnessLevel;
+                          _bioController.text = profile.bio ?? '';
+                          HapticFeedback.lightImpact();
+                          setState(() => _isEditing = true);
+                        }
+                      },
+                      onLevelChanged: (level) =>
+                          setState(() => _editingFitnessLevel = level),
+                      // Only hookup the picker when in edit mode.
+                      onAvatarTap: _isEditing
+                          ? () => _showAvatarPicker(profile.avatarId)
+                          : null,
+                    ),
+                    const SizedBox(height: 24),
+
+                    SizedBox(
+                      height: 104,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          _MetricChip(
+                            data: _MetricData(
+                              icon: Icons.local_fire_department_rounded,
+                              value: '${profile.streakCount}',
+                              label: 'Streak Days',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _MetricChip(
+                            data: _MetricData(
+                              icon: Icons.fitness_center_rounded,
+                              value: '${profile.totalWorkoutsCompleted}',
+                              label: 'Workouts',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _MetricChip(
+                            data: _MetricData(
+                              icon: Icons.bolt_rounded,
+                              value: _formatXp(profile.emberXp),
+                              label: 'Ember XP',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    _SectionContainer(
+                      title: 'Preferences',
+                      subtitle: 'Personal defaults for your sessions',
+                      icon: Icons.tune_rounded,
+                      children: [
+                        _PreferenceTile(
+                          icon: Icons.track_changes_rounded,
+                          title: 'Primary Goal',
+                          trailing: _isEditing
+                              ? _CompactDropdown<PrimaryGoal>(
+                                  value: profile.primaryGoal,
+                                  items: PrimaryGoal.values,
+                                  labelOf: (g) => g.label,
+                                  onChanged: (g) {
+                                    ref
+                                        .read(userProfileProvider.notifier)
+                                        .updatePreference(primaryGoal: g);
+                                  },
+                                )
+                              : _ValueLabel(label: profile.primaryGoal.label),
+                        ),
+                        _PreferenceTile(
+                          icon: Icons.monitor_weight_rounded,
+                          title: 'Unit System',
+                          trailing: _CompactDropdown<UnitSystem>(
+                            value: profile.unitSystem,
+                            items: UnitSystem.values,
+                            labelOf: (s) => s.label,
+                            onChanged: (s) {
+                              ref
+                                  .read(userProfileProvider.notifier)
+                                  .updatePreference(unitSystem: s);
+                            },
+                          ),
+                        ),
+                        _PreferenceTile(
+                          icon: Icons.timer_rounded,
+                          title: 'Rest Timer',
+                          trailing: PopupMenuButton<int>(
+                            initialValue: profile.defaultRestTimerSeconds,
+                            onSelected: (s) {
+                              HapticFeedback.selectionClick();
+                              ref
+                                  .read(userProfileProvider.notifier)
+                                  .updatePreference(
+                                    defaultRestTimerSeconds: s,
+                                  );
+                            },
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 30, child: Text('30 s')),
+                              PopupMenuItem(value: 45, child: Text('45 s')),
+                              PopupMenuItem(value: 60, child: Text('60 s')),
+                              PopupMenuItem(value: 90, child: Text('90 s')),
+                              PopupMenuItem(value: 120, child: Text('120 s')),
+                            ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${profile.defaultRestTimerSeconds}s',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelLarge
+                                      ?.copyWith(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                                const SizedBox(width: 2),
+                                Icon(
+                                  Icons.expand_more_rounded,
+                                  size: 18,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        _PreferenceTile(
+                          icon: Icons.palette_rounded,
+                          title: 'Theme',
+                          showDivider: false,
+                          trailing: _CompactDropdown<ThemePreference>(
+                            value: profile.theme,
+                            items: ThemePreference.values,
+                            labelOf: (t) => t.label,
+                            onChanged: (t) {
+                              ref
+                                  .read(userProfileProvider.notifier)
+                                  .updatePreference(theme: t);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    _SectionContainer(
+                      title: 'Notifications',
+                      subtitle: 'Control what gets surfaced to you',
+                      icon: Icons.notifications_active_rounded,
+                      children: [
+                        _PreferenceTile(
+                          icon: Icons.notifications_active_rounded,
+                          title: 'Pop-up Notification',
+                          showDivider: false,
+                          trailing: Switch.adaptive(
+                            value: profile.notificationsEnabled,
+                            activeThumbColor: _primaryOrange,
+                            onChanged: (val) {
+                              HapticFeedback.lightImpact();
+                              ref
+                                  .read(userProfileProvider.notifier)
+                                  .updatePreference(
+                                    notificationsEnabled: val,
+                                  );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    _SectionContainer(
+                      title: 'Actions',
+                      subtitle: 'Legal and support quick links',
+                      icon: Icons.flash_on_rounded,
+                      children: [
+                        _ActionTile(
+                          icon: Icons.info_outline_rounded,
+                          title: 'About Ember',
+                          onTap: _showAboutDialog,
+                        ),
+                        _ActionTile(
+                          icon: Icons.privacy_tip_outlined,
+                          title: 'Privacy Options',
+                          onTap: () =>
+                              _showActionMessage('Open Privacy Options'),
+                        ),
+                        _ActionTile(
+                          icon: Icons.gavel_rounded,
+                          title: 'Terms and Conditions',
+                          onTap: () =>
+                              _showActionMessage('Open Terms & Conditions'),
+                        ),
+                        _ActionTile(
+                          icon: Icons.help_outline_rounded,
+                          title: 'Help & Support',
+                          onTap: () =>
+                              _showActionMessage('Open Help & Support'),
+                        ),
+                        _ActionTile(
+                          icon: Icons.logout_rounded,
+                          title: 'Log Out',
+                          isDestructive: true,
+                          isLoading: isSigningOut,
+                          showDivider: false,
+                          onTap: isSigningOut ? () {} : _handleLogOut,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(BuildContext context) {
     return Row(
       children: [
         Image.asset(
           'assets/logo/logo-primary@2x.png',
           width: 32,
           height: 32,
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(
-              Icons.local_fire_department,
-              color: _primaryOrange,
-              size: 32,
-            );
-          },
+          errorBuilder: (context, error, stackTrace) => const Icon(
+            Icons.local_fire_department,
+            color: _primaryOrange,
+            size: 32,
+          ),
         ),
         const SizedBox(width: 12),
         Text(
-          "Profile",
+          'Profile',
           style: Theme.of(context).textTheme.displayMedium?.copyWith(
-            fontSize: 28,
-            color: Theme.of(context).colorScheme.onSurface,
-            letterSpacing: -0.5,
-          ),
+                fontSize: 28,
+                color: Theme.of(context).colorScheme.onSurface,
+                letterSpacing: -0.5,
+              ),
         ),
       ],
     );
+  }
+
+  String _formatXp(int xp) {
+    if (xp >= 1000) {
+      final k = xp / 1000;
+      return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}k';
+    }
+    return '$xp';
   }
 
   void _showActionMessage(String message) {
@@ -410,25 +650,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Custom Components
+// Components
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _IdentityCard extends StatelessWidget {
   const _IdentityCard({
-    required this.userName,
-    required this.userBio,
+    required this.username,
+    required this.avatarId,
+    required this.bio,
+    required this.bioController,
     required this.fitnessLevel,
     required this.isEditing,
     required this.onEditToggle,
     required this.onLevelChanged,
+    this.onAvatarTap,
   });
 
-  final String userName;
-  final String userBio;
+  final String username;
+  final String avatarId;
+  final String? bio;
+  final TextEditingController bioController;
   final FitnessLevel fitnessLevel;
   final bool isEditing;
   final VoidCallback onEditToggle;
   final ValueChanged<FitnessLevel> onLevelChanged;
+  final VoidCallback? onAvatarTap;
 
   static const Color _primaryOrange = AppColors.primary;
 
@@ -453,18 +699,57 @@ class _IdentityCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _primaryOrange.withValues(alpha: 0.12),
-                  border: Border.all(color: _primaryOrange, width: 2),
-                ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  size: 36,
-                  color: _primaryOrange,
+              // ── Avatar with optional edit overlay ──
+              GestureDetector(
+                onTap: onAvatarTap,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _primaryOrange, width: 2),
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/avatars/avatar_$avatarId.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            color: _primaryOrange.withValues(alpha: 0.12),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              size: 36,
+                              color: _primaryOrange,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Edit overlay badge -- only shown in edit mode
+                    if (onAvatarTap != null)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: _primaryOrange,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.darkSurface,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.edit_rounded,
+                            size: 11,
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 16),
@@ -473,11 +758,13 @@ class _IdentityCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      userName,
-                      style: Theme.of(context).textTheme.headlineLarge
+                      username,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineLarge
                           ?.copyWith(
                             fontSize: 22,
-                            color: Colors.white,
+                            color: AppColors.darkTextPrimary,
                             letterSpacing: -0.3,
                           ),
                     ),
@@ -497,7 +784,7 @@ class _IdentityCard extends StatelessWidget {
                           items: FitnessLevel.values,
                           labelOf: (l) => l.label,
                           onChanged: onLevelChanged,
-                          textColor: Colors.white,
+                          textColor: AppColors.darkTextPrimary,
                         ),
                       )
                     else
@@ -513,17 +800,63 @@ class _IdentityCard extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: Colors.white.withValues(alpha: 0.1),
+            color: AppColors.darkTextPrimary.withValues(alpha: 0.1),
           ),
           const SizedBox(height: 16),
-          Text(
-            userBio,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 13,
-              color: Colors.white70,
-              height: 1.5,
+          if (isEditing)
+            TextField(
+              controller: bioController,
+              maxLength: 150,
+              maxLines: 3,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    color: AppColors.darkTextPrimary.withValues(alpha: 0.7),
+                    height: 1.5,
+                  ),
+              decoration: InputDecoration(
+                hintText: 'Write something about yourself...',
+                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: 13,
+                      color: AppColors.darkTextPrimary.withValues(alpha: 0.3),
+                    ),
+                counterStyle: TextStyle(
+                  color: AppColors.darkTextPrimary.withValues(alpha: 0.3),
+                ),
+                fillColor: AppColors.darkSurfaceVariant,
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: AppColors.darkTextPrimary.withValues(alpha: 0.15),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: AppColors.darkTextPrimary.withValues(alpha: 0.15),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: _primaryOrange),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+            )
+          else
+            Text(
+              (bio == null || bio!.isEmpty) ? 'No bio yet.' : bio!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    color: (bio == null || bio!.isEmpty)
+                        ? AppColors.darkTextPrimary.withValues(alpha: 0.3)
+                        : AppColors.darkTextPrimary.withValues(alpha: 0.7),
+                    height: 1.5,
+                  ),
             ),
-          ),
         ],
       ),
     );
@@ -547,10 +880,10 @@ class _LevelBadge extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: _primaryOrange,
-        ),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: _primaryOrange,
+            ),
       ),
     );
   }
@@ -577,10 +910,10 @@ class _EditButton extends StatelessWidget {
         child: Text(
           isEditing ? 'Done' : 'Edit',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.darkTextPrimary,
+              ),
         ),
       ),
     );
@@ -603,20 +936,21 @@ class _MetricChip extends StatelessWidget {
   final _MetricData data;
 
   static const Color _primaryOrange = AppColors.primary;
-  static const Color _surfaceColor = AppColors.lightBackground;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: 110,
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       decoration: BoxDecoration(
-        color: _surfaceColor,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: colorScheme.outline, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -641,18 +975,18 @@ class _MetricChip extends StatelessWidget {
               Text(
                 data.value,
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontSize: 20,
-                  color: Theme.of(context).colorScheme.onSurface,
-                  letterSpacing: -0.5,
-                ),
+                      fontSize: 20,
+                      color: colorScheme.onSurface,
+                      letterSpacing: -0.5,
+                    ),
               ),
               Text(
                 data.label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -678,20 +1012,21 @@ class _SectionContainer extends StatelessWidget {
   final String? subtitle;
 
   static const Color _primaryOrange = AppColors.primary;
-  static const Color _surfaceColor = AppColors.lightBackground;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _surfaceColor,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: colorScheme.outline, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -710,19 +1045,21 @@ class _SectionContainer extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.headlineMedium
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
                           ?.copyWith(
                             fontSize: 18,
-                            color: Theme.of(context).colorScheme.onSurface,
+                            color: colorScheme.onSurface,
                           ),
                     ),
                     if (subtitle != null)
                       Text(
                         subtitle!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                       ),
                   ],
                 ),
@@ -733,7 +1070,7 @@ class _SectionContainer extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colorScheme.outlineVariant,
           ),
           const SizedBox(height: 8),
           ...children,
@@ -758,26 +1095,24 @@ class _PreferenceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
-              Icon(
-                icon,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                size: 20,
-              ),
+              Icon(icon, color: colorScheme.onSurfaceVariant, size: 20),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
                 ),
               ),
               trailing,
@@ -788,7 +1123,7 @@ class _PreferenceTile extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colorScheme.outlineVariant,
           ),
       ],
     );
@@ -814,13 +1149,13 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     const destructiveColor = AppColors.secondary;
-    final iconColor = isDestructive
-        ? destructiveColor
-        : Theme.of(context).colorScheme.onSurfaceVariant;
-    final titleColor = isDestructive
-        ? destructiveColor
-        : Theme.of(context).colorScheme.onSurface;
+
+    final iconColor =
+        isDestructive ? destructiveColor : colorScheme.onSurfaceVariant;
+    final titleColor =
+        isDestructive ? destructiveColor : colorScheme.onSurface;
 
     return Column(
       children: [
@@ -842,10 +1177,10 @@ class _ActionTile extends StatelessWidget {
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: titleColor,
-                    ),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: titleColor,
+                        ),
                   ),
                 ),
                 if (isLoading)
@@ -860,7 +1195,7 @@ class _ActionTile extends StatelessWidget {
                 else
                   Icon(
                     Icons.arrow_forward_ios,
-                    color: Colors.black.withValues(alpha: 0.2),
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                     size: 14,
                   ),
               ],
@@ -871,7 +1206,7 @@ class _ActionTile extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colorScheme.outlineVariant,
           ),
       ],
     );
@@ -887,10 +1222,10 @@ class _ValueLabel extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
     );
   }
 }
@@ -912,17 +1247,19 @@ class _CompactDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return DropdownButtonHideUnderline(
       child: DropdownButton<T>(
         value: value,
         borderRadius: BorderRadius.circular(14),
         isDense: true,
-        dropdownColor: AppColors.lightBackground,
+        dropdownColor: colorScheme.surface,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: textColor,
-        ),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
         icon: Icon(Icons.expand_more_rounded, size: 16, color: textColor),
         items: items
             .map(
@@ -931,8 +1268,8 @@ class _CompactDropdown<T> extends StatelessWidget {
                 child: Text(
                   labelOf(item),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                        color: colorScheme.onSurface,
+                      ),
                 ),
               ),
             )

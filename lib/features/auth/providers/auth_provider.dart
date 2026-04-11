@@ -11,7 +11,6 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 });
 
 final currentUserProvider = Provider<User?>((ref) {
-  // Watch authStateProvider so this re-evaluates on every auth change
   final authState = ref.watch(authStateProvider);
   return authState.asData?.value.session?.user;
 });
@@ -111,23 +110,22 @@ class ProfileSetupNotifier extends AsyncNotifier<void> {
   Future<void> saveProfile({
     required String username,
     required String avatarId,
+    String? bio,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await ref.read(authRepositoryProvider).saveProfile(
             username: username,
             avatarId: avatarId,
+            bio: bio,
           );
-      // Invalidate so the router re-fetches the now-complete profile
       ref.invalidate(currentProfileProvider);
     });
   }
 }
 
 // Fetches the current user's profile from Supabase.
-// Automatically re-fetches when currentUserProvider changes
-// because it watches it — meaning every sign in, sign out,
-// or session restore triggers a fresh fetch.
+// Automatically re-fetches when currentUserProvider changes.
 final currentProfileProvider =
     FutureProvider<Map<String, dynamic>?>((ref) async {
   final user = ref.watch(currentUserProvider);

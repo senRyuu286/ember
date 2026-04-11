@@ -38,15 +38,22 @@ class AuthRepository {
   Future<void> saveProfile({
     required String username,
     required String avatarId,
+    String? bio,
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('No authenticated user found.');
 
-    await _client.from('profiles').update({
+    final updates = <String, dynamic>{
       'username': username,
       'avatar_id': avatarId,
       'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', userId);
+    };
+
+    if (bio != null && bio.isNotEmpty) {
+      updates['bio'] = bio;
+    }
+
+    await _client.from('profiles').update(updates).eq('id', userId);
   }
 
   Future<Map<String, dynamic>?> getProfile() async {

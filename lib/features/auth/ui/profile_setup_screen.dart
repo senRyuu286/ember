@@ -2,6 +2,7 @@ import 'package:ember/core/router/app_routes.dart';
 import 'package:ember/core/theme/app_colors.dart';
 import 'package:ember/features/auth/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -22,16 +23,20 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   Future<void> _onContinue() async {
     final isValid = _formKey.currentState?.saveAndValidate() ?? false;
     if (!isValid) return;
+
     if (_selectedAvatarId == null) {
       _showAvatarError();
       return;
     }
 
-    final username = _formKey.currentState!.value['username'] as String;
+    final fields = _formKey.currentState!.value;
+    final username = fields['username'] as String;
+    final bio = (fields['bio'] as String?)?.trim();
 
     await ref.read(profileSetupNotifierProvider.notifier).saveProfile(
           username: username,
           avatarId: _selectedAvatarId!,
+          bio: bio,
         );
 
     if (!mounted) return;
@@ -42,7 +47,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       return;
     }
 
-    // Clear the flag and navigate to home
     ref.read(needsProfileSetupProvider.notifier).setComplete();
     context.go(AppRoutes.home);
   }
@@ -58,9 +62,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         ),
         backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -77,9 +79,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         ),
         backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -89,8 +89,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    final profileSetupState = ref.watch(profileSetupNotifierProvider);
-    final isLoading = profileSetupState.isLoading;
+    final isLoading = ref.watch(profileSetupNotifierProvider).isLoading;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -107,6 +106,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             children: [
               const SizedBox(height: 8),
 
+              // ── Header ──
               Text(
                 'Set up your\nprofile.',
                 style: textTheme.displayMedium?.copyWith(
@@ -120,7 +120,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               Text(
                 'Choose how you appear in Ember.',
                 style: textTheme.bodyMedium?.copyWith(
-                  color: AppColors.lightTextSecondary,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 36),
@@ -131,6 +131,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ── Username ──
                     Text(
                       'Username',
                       style: textTheme.labelLarge?.copyWith(
@@ -141,7 +142,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                     FormBuilderTextField(
                       name: 'username',
                       keyboardType: TextInputType.text,
-                      textInputAction: TextInputAction.done,
+                      textInputAction: TextInputAction.next,
                       autocorrect: false,
                       enabled: !isLoading,
                       decoration: const InputDecoration(
@@ -167,12 +168,49 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                         ),
                       ]),
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Bio (optional) ──
+                    Row(
+                      children: [
+                        Text(
+                          'Bio',
+                          style: textTheme.labelLarge?.copyWith(
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'optional',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    FormBuilderTextField(
+                      name: 'bio',
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.newline,
+                      maxLines: 3,
+                      maxLength: 150,
+                      enabled: !isLoading,
+                      decoration: const InputDecoration(
+                        hintText: 'Tell people a bit about yourself...',
+                        alignLabelWithHint: true,
+                      ),
+                      // No validator -- field is optional
+                    ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 32),
 
+              // ── Avatar picker header ──
               Text(
                 'Profile Picture',
                 style: textTheme.labelLarge?.copyWith(
@@ -183,11 +221,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               Text(
                 'Pick one for now — you can change it later.',
                 style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.lightTextSecondary,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 16),
 
+              // ── Avatar grid ──
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -200,21 +239,23 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 ),
                 itemBuilder: (context, index) {
                   final avatar = ProfileSetupData.avatars[index];
-                  final isSelected = _selectedAvatarId == avatar['id'];
+                  final avatarId = avatar['id']!;
+                  final isSelected = _selectedAvatarId == avatarId;
 
                   return GestureDetector(
                     onTap: isLoading
                         ? null
-                        : () => setState(
-                              () => _selectedAvatarId = avatar['id'],
-                            ),
+                        : () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _selectedAvatarId = avatarId);
+                          },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOut,
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppColors.primary.withValues(alpha: 0.1)
-                            : AppColors.lightSurfaceVariant,
+                            : colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
@@ -225,46 +266,42 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       ),
                       child: Stack(
                         children: [
-                          Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.person_rounded,
-                                  size: 40,
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : AppColors.lightTextDisabled,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  avatar['label']!,
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: isSelected
-                                        ? AppColors.primary
-                                        : AppColors.lightTextSecondary,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
+                          // Avatar image
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(13.5),
+                            child: Image.asset(
+                              'assets/avatars/avatar_$avatarId.png',
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (context, error, stackTrace) {
+                                // Fallback if asset is missing
+                                return Center(
+                                  child: Icon(
+                                    Icons.person_rounded,
+                                    size: 40,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
-                                ),
-                              ],
+                                );
+                              },
                             ),
                           ),
+
+                          // Selection check badge
                           if (isSelected)
                             Positioned(
                               top: 8,
                               right: 8,
                               child: Container(
-                                width: 20,
-                                height: 20,
+                                width: 22,
+                                height: 22,
                                 decoration: const BoxDecoration(
                                   color: AppColors.primary,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
                                   Icons.check_rounded,
-                                  size: 13,
+                                  size: 14,
                                   color: AppColors.white,
                                 ),
                               ),

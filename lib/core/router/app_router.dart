@@ -12,7 +12,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'app_routes.dart';
 
-// Routes that are accessible without an authenticated session.
 const _publicRoutes = {
   AppRoutes.splash,
   AppRoutes.welcome,
@@ -20,6 +19,14 @@ const _publicRoutes = {
   AppRoutes.signUp,
   AppRoutes.checkEmail,
   AppRoutes.forgotPassword,
+  AppRoutes.profileSetup,
+};
+
+// Public routes where an authenticated user should still be allowed to stay.
+// Check email and profile setup are part of active flows that must complete
+// before the user is sent to home, even if a session already exists.
+const _allowAuthenticatedRoutes = {
+  AppRoutes.checkEmail,
   AppRoutes.profileSetup,
 };
 
@@ -31,27 +38,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final authState = ref.read(authStateProvider);
       final needsProfileSetup = ref.read(needsProfileSetupProvider);
 
+      // Wait for the auth stream to emit before making any decision.
       if (authState.isLoading) return null;
 
       final currentPath = state.matchedLocation;
 
-      final isOnSplash = currentPath == AppRoutes.splash;
-      final isOnProfileSetup = currentPath == AppRoutes.profileSetup;
-      final isOnCheckEmail = currentPath == AppRoutes.checkEmail;
+      // Splash handles its own navigation internally — never redirect away.
+      if (currentPath == AppRoutes.splash) return null;
 
-      if (isOnSplash) return null;
-      if (isOnProfileSetup) return null;
-      if (isOnCheckEmail) return null;
+      // Active flows that must not be interrupted by the router.
+      if (_allowAuthenticatedRoutes.contains(currentPath)) return null;
 
-      // In-memory flag set during the current signup flow
+      // Signup flow takes priority over everything else.
       if (needsProfileSetup) return AppRoutes.profileSetup;
 
-      final isAuthenticated =
-          authState.asData?.value.session != null;
+      final isAuthenticated = authState.asData?.value.session != null;
       final isOnPublicRoute = _publicRoutes.contains(currentPath);
 
-      // Signed-out user trying to access a protected route → welcome
+      if (isAuthenticated && isOnPublicRoute) {
+        // Signed-in user landed on a public route (e.g. welcome, sign-in
+        // after a successful login) → send them to home.
+        return AppRoutes.home;
+      }
+
       if (!isAuthenticated && !isOnPublicRoute) {
+        // Signed-out user trying to reach a protected route → welcome.
         return AppRoutes.welcome;
       }
 

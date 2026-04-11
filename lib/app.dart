@@ -1,6 +1,7 @@
 import 'package:app_links/app_links.dart';
 import 'package:ember/core/router/app_router.dart';
 import 'package:ember/core/theme/app_theme.dart';
+import 'package:ember/core/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,13 +32,14 @@ class _EmberState extends ConsumerState<Ember> {
   @override
   Widget build(BuildContext context) {
     final router = ref.read(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'Ember',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }

@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   app_links: ^7.0.0
+  dart_style: ^3.1.7
   dio: ^5.9.2
   drift: ^2.32.1
   flutter:
@@ -36,6 +37,7 @@ dev_dependencies:
 # TODO: Remove once riverpod_generator supports analyzer ^10.0.0 (needed by drift_dev ^2.32.1)
 dependency_overrides:
   analyzer: ^10.0.0
+  dart_style: 3.1.7
 
 flutter:
   uses-material-design: true
@@ -43,3 +45,4 @@ flutter:
     - assets/
     - assets/logo/
     - assets/illustrations/
+    - assets/avatars/
