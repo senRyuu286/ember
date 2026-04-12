@@ -5,6 +5,9 @@ import 'package:ember/core/theme/app_colors.dart';
 import 'package:ember/features/auth/providers/auth_provider.dart';
 import 'package:ember/features/profile/data/profile_models.dart';
 import 'package:ember/features/profile/providers/profile_provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:ember/core/router/app_routes.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -44,7 +47,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     HapticFeedback.mediumImpact();
     setState(() => _isEditing = false);
 
-    await ref.read(userProfileProvider.notifier).saveEditableFields(
+    await ref
+        .read(userProfileProvider.notifier)
+        .saveEditableFields(
           bio: _bioController.text.trim(),
           fitnessLevel: _editingFitnessLevel ?? profile.fitnessLevel,
         );
@@ -62,9 +67,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         return Container(
           decoration: BoxDecoration(
             color: colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
           child: Column(
@@ -87,16 +90,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Text(
                 'Choose Avatar',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: 18,
-                      color: colorScheme.onSurface,
-                    ),
+                  fontSize: 18,
+                  color: colorScheme.onSurface,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Tap one to update your profile picture.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -112,11 +115,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     itemCount: 12,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 1,
-                    ),
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 1,
+                        ),
                     itemBuilder: (context, index) {
                       final avatarId = '${index + 1}';
                       final isSelected = selectedId == avatarId;
@@ -209,8 +212,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         content: Text(
           'Are you sure you want to log out?',
-          style:
-              Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14),
         ),
         actions: [
           TextButton(
@@ -218,8 +220,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Text(
               'Cancel',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           TextButton(
@@ -227,10 +229,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
             child: Text(
               'Log Out',
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -249,82 +250,196 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showAboutDialog() {
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: _primaryOrange.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(18),
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Logo ──
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: _primaryOrange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Image.asset(
+                  'assets/logo/logo-primary@2x.png',
+                  width: 40,
+                  height: 40,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.local_fire_department,
+                    color: _primaryOrange,
+                    size: 40,
+                  ),
+                ),
               ),
-              child: Image.asset(
-                'assets/logo/logo-primary@2x.png',
-                width: 36,
-                height: 36,
-                errorBuilder: (_, _, _) => const Icon(
-                  Icons.local_fire_department,
+              const SizedBox(height: 16),
+
+              // ── App name + version ──
+              Text(
+                'Ember',
+                style: textTheme.headlineLarge?.copyWith(
+                  fontSize: 24,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Version 1.0.0',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // ── Tagline ──
+              Text(
+                'Your free, offline-capable workout companion. '
+                'Plan your training, track your progress, and '
+                'build the habit — one session at a time.',
+                textAlign: TextAlign.center,
+                style: textTheme.bodySmall?.copyWith(
+                  fontSize: 13,
+                  height: 1.55,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Action buttons row ──
+              Row(
+                children: [
+                  // Check for updates
+                  Expanded(
+                    child: _AboutActionButton(
+                      icon: Icons.system_update_alt_rounded,
+                      label: "Check for\nUpdates",
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        showDialog<void>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: AppColors.success,
+                                  size: 40,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  "You're up to date!",
+                                  style: textTheme.headlineMedium?.copyWith(
+                                    fontSize: 17,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Ember v1.0.0 is the latest version.',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: Text(
+                                  'OK',
+                                  style: textTheme.labelLarge?.copyWith(
+                                    color: _primaryOrange,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // What's New
+                  Expanded(
+                    child: _AboutActionButton(
+                      icon: Icons.auto_awesome_rounded,
+                      label: "What's\nNew",
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.of(context).pop();
+                        context.push(AppRoutes.changelog);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // GitHub
+                  Expanded(
+                    child: _AboutActionButton(
+                      icon: Icons.code_rounded,
+                      label: 'GitHub\n',
+                      onTap: () async {
+                        HapticFeedback.lightImpact();
+                        final uri = Uri.parse(
+                          'https://github.com/senRyuu286/ember',
+                        );
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+              Divider(height: 1, color: colorScheme.outlineVariant),
+              const SizedBox(height: 12),
+
+              // ── Copyright ──
+              Text(
+                '© 2026 senRyuu286. All rights reserved.',
+                style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Close',
+                style: textTheme.labelLarge?.copyWith(
                   color: _primaryOrange,
-                  size: 36,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Ember',
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    fontSize: 22,
-                    letterSpacing: -0.3,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Version 1.0.0',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Ember is your free, offline-capable workout companion. '
-              'Plan your training, track your progress, and build the '
-              'habit — one session at a time.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 13,
-                    height: 1.5,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '© 2025 Ember. All rights reserved.',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurfaceVariant
-                        .withValues(alpha: 0.6),
-                  ),
-            ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Close',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: _primaryOrange,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -335,8 +450,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
 
-    final overlayStyle =
-        isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
+    final overlayStyle = isDark
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayStyle,
@@ -477,9 +593,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               HapticFeedback.selectionClick();
                               ref
                                   .read(userProfileProvider.notifier)
-                                  .updatePreference(
-                                    defaultRestTimerSeconds: s,
-                                  );
+                                  .updatePreference(defaultRestTimerSeconds: s);
                             },
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
@@ -496,9 +610,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               children: [
                                 Text(
                                   '${profile.defaultRestTimerSeconds}s',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelLarge
+                                  style: Theme.of(context).textTheme.labelLarge
                                       ?.copyWith(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
@@ -550,9 +662,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               HapticFeedback.lightImpact();
                               ref
                                   .read(userProfileProvider.notifier)
-                                  .updatePreference(
-                                    notificationsEnabled: val,
-                                  );
+                                  .updatePreference(notificationsEnabled: val);
                             },
                           ),
                         ),
@@ -573,20 +683,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         _ActionTile(
                           icon: Icons.privacy_tip_outlined,
                           title: 'Privacy Options',
-                          onTap: () =>
-                              _showActionMessage('Open Privacy Options'),
+                          onTap: () => context.push(AppRoutes.privacy),
                         ),
                         _ActionTile(
                           icon: Icons.gavel_rounded,
                           title: 'Terms and Conditions',
-                          onTap: () =>
-                              _showActionMessage('Open Terms & Conditions'),
+                          onTap: () => context.push(AppRoutes.terms),
                         ),
                         _ActionTile(
                           icon: Icons.help_outline_rounded,
                           title: 'Help & Support',
-                          onTap: () =>
-                              _showActionMessage('Open Help & Support'),
+                          onTap: () => context.push(AppRoutes.help),
                         ),
                         _ActionTile(
                           icon: Icons.logout_rounded,
@@ -625,10 +732,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         Text(
           'Profile',
           style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                fontSize: 28,
-                color: Theme.of(context).colorScheme.onSurface,
-                letterSpacing: -0.5,
-              ),
+            fontSize: 28,
+            color: Theme.of(context).colorScheme.onSurface,
+            letterSpacing: -0.5,
+          ),
         ),
       ],
     );
@@ -640,12 +747,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}k';
     }
     return '$xp';
-  }
-
-  void _showActionMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -759,9 +860,7 @@ class _IdentityCard extends StatelessWidget {
                   children: [
                     Text(
                       username,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineLarge
+                      style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
                             fontSize: 22,
                             color: AppColors.darkTextPrimary,
@@ -809,16 +908,16 @@ class _IdentityCard extends StatelessWidget {
               maxLength: 150,
               maxLines: 3,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 13,
-                    color: AppColors.darkTextPrimary.withValues(alpha: 0.7),
-                    height: 1.5,
-                  ),
+                fontSize: 13,
+                color: AppColors.darkTextPrimary.withValues(alpha: 0.7),
+                height: 1.5,
+              ),
               decoration: InputDecoration(
                 hintText: 'Write something about yourself...',
                 hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 13,
-                      color: AppColors.darkTextPrimary.withValues(alpha: 0.3),
-                    ),
+                  fontSize: 13,
+                  color: AppColors.darkTextPrimary.withValues(alpha: 0.3),
+                ),
                 counterStyle: TextStyle(
                   color: AppColors.darkTextPrimary.withValues(alpha: 0.3),
                 ),
@@ -850,12 +949,12 @@ class _IdentityCard extends StatelessWidget {
             Text(
               (bio == null || bio!.isEmpty) ? 'No bio yet.' : bio!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 13,
-                    color: (bio == null || bio!.isEmpty)
-                        ? AppColors.darkTextPrimary.withValues(alpha: 0.3)
-                        : AppColors.darkTextPrimary.withValues(alpha: 0.7),
-                    height: 1.5,
-                  ),
+                fontSize: 13,
+                color: (bio == null || bio!.isEmpty)
+                    ? AppColors.darkTextPrimary.withValues(alpha: 0.3)
+                    : AppColors.darkTextPrimary.withValues(alpha: 0.7),
+                height: 1.5,
+              ),
             ),
         ],
       ),
@@ -880,10 +979,10 @@ class _LevelBadge extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: _primaryOrange,
-            ),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: _primaryOrange,
+        ),
       ),
     );
   }
@@ -910,10 +1009,10 @@ class _EditButton extends StatelessWidget {
         child: Text(
           isEditing ? 'Done' : 'Edit',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.darkTextPrimary,
-              ),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.darkTextPrimary,
+          ),
         ),
       ),
     );
@@ -975,18 +1074,18 @@ class _MetricChip extends StatelessWidget {
               Text(
                 data.value,
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontSize: 20,
-                      color: colorScheme.onSurface,
-                      letterSpacing: -0.5,
-                    ),
+                  fontSize: 20,
+                  color: colorScheme.onSurface,
+                  letterSpacing: -0.5,
+                ),
               ),
               Text(
                 data.label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1045,9 +1144,7 @@ class _SectionContainer extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
+                      style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
                             fontSize: 18,
                             color: colorScheme.onSurface,
@@ -1057,9 +1154,9 @@ class _SectionContainer extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 12,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                          fontSize: 12,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                   ],
                 ),
@@ -1067,11 +1164,7 @@ class _SectionContainer extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: colorScheme.outlineVariant,
-          ),
+          Divider(height: 1, thickness: 1, color: colorScheme.outlineVariant),
           const SizedBox(height: 8),
           ...children,
         ],
@@ -1109,10 +1202,10 @@ class _PreferenceTile extends StatelessWidget {
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
                 ),
               ),
               trailing,
@@ -1120,11 +1213,7 @@ class _PreferenceTile extends StatelessWidget {
           ),
         ),
         if (showDivider)
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: colorScheme.outlineVariant,
-          ),
+          Divider(height: 1, thickness: 1, color: colorScheme.outlineVariant),
       ],
     );
   }
@@ -1152,10 +1241,10 @@ class _ActionTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     const destructiveColor = AppColors.secondary;
 
-    final iconColor =
-        isDestructive ? destructiveColor : colorScheme.onSurfaceVariant;
-    final titleColor =
-        isDestructive ? destructiveColor : colorScheme.onSurface;
+    final iconColor = isDestructive
+        ? destructiveColor
+        : colorScheme.onSurfaceVariant;
+    final titleColor = isDestructive ? destructiveColor : colorScheme.onSurface;
 
     return Column(
       children: [
@@ -1177,10 +1266,10 @@ class _ActionTile extends StatelessWidget {
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: titleColor,
-                        ),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: titleColor,
+                    ),
                   ),
                 ),
                 if (isLoading)
@@ -1203,11 +1292,7 @@ class _ActionTile extends StatelessWidget {
           ),
         ),
         if (showDivider)
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: colorScheme.outlineVariant,
-          ),
+          Divider(height: 1, thickness: 1, color: colorScheme.outlineVariant),
       ],
     );
   }
@@ -1222,10 +1307,59 @@ class _ValueLabel extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
+class _AboutActionButton extends StatelessWidget {
+  const _AboutActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  static const Color _primaryOrange = AppColors.primary;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colorScheme.outline, width: 1),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: _primaryOrange, size: 22),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: textTheme.labelSmall?.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+                height: 1.3,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1256,10 +1390,10 @@ class _CompactDropdown<T> extends StatelessWidget {
         isDense: true,
         dropdownColor: colorScheme.surface,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
         icon: Icon(Icons.expand_more_rounded, size: 16, color: textColor),
         items: items
             .map(
@@ -1268,8 +1402,8 @@ class _CompactDropdown<T> extends StatelessWidget {
                 child: Text(
                   labelOf(item),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                      ),
+                    color: colorScheme.onSurface,
+                  ),
                 ),
               ),
             )

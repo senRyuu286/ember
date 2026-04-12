@@ -52,3 +52,6 @@ ios/.symlinks/
 
 # Supabase credentials
 lib/core/supabase_config.dart
+
+# Documents
+/docs/

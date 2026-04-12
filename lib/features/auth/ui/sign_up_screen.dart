@@ -354,7 +354,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   alignment: PlaceholderAlignment.middle,
                                   child: GestureDetector(
                                     onTap: () {
-                                      // TODO: open Terms and Conditions
+                                      context.push(AppRoutes.terms);
                                     },
                                     child: Text(
                                       'Terms and Conditions',
@@ -375,7 +375,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   alignment: PlaceholderAlignment.middle,
                                   child: GestureDetector(
                                     onTap: () {
-                                      // TODO: open Privacy Policy
+                                      context.push(AppRoutes.privacy);
                                     },
                                     child: Text(
                                       'Privacy Policy',

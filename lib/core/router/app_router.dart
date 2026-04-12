@@ -7,6 +7,10 @@ import 'package:ember/features/auth/ui/sign_up_screen.dart';
 import 'package:ember/features/branding/ui/splash_screen.dart';
 import 'package:ember/features/branding/ui/welcome_screen.dart';
 import 'package:ember/features/home/ui/home_screen.dart';
+import 'package:ember/features/legal/ui/terms_screen.dart';
+import 'package:ember/features/legal/ui/privacy_screen.dart';
+import 'package:ember/features/legal/ui/changelog_screen.dart';
+import 'package:ember/features/legal/ui/help_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,9 +26,6 @@ const _publicRoutes = {
   AppRoutes.profileSetup,
 };
 
-// Public routes where an authenticated user should still be allowed to stay.
-// Check email and profile setup are part of active flows that must complete
-// before the user is sent to home, even if a session already exists.
 const _allowAuthenticatedRoutes = {
   AppRoutes.checkEmail,
   AppRoutes.profileSetup,
@@ -38,33 +39,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final authState = ref.read(authStateProvider);
       final needsProfileSetup = ref.read(needsProfileSetupProvider);
 
-      // Wait for the auth stream to emit before making any decision.
       if (authState.isLoading) return null;
 
       final currentPath = state.matchedLocation;
 
-      // Splash handles its own navigation internally — never redirect away.
       if (currentPath == AppRoutes.splash) return null;
-
-      // Active flows that must not be interrupted by the router.
       if (_allowAuthenticatedRoutes.contains(currentPath)) return null;
-
-      // Signup flow takes priority over everything else.
       if (needsProfileSetup) return AppRoutes.profileSetup;
 
       final isAuthenticated = authState.asData?.value.session != null;
       final isOnPublicRoute = _publicRoutes.contains(currentPath);
 
-      if (isAuthenticated && isOnPublicRoute) {
-        // Signed-in user landed on a public route (e.g. welcome, sign-in
-        // after a successful login) → send them to home.
-        return AppRoutes.home;
-      }
-
-      if (!isAuthenticated && !isOnPublicRoute) {
-        // Signed-out user trying to reach a protected route → welcome.
-        return AppRoutes.welcome;
-      }
+      if (isAuthenticated && isOnPublicRoute) return AppRoutes.home;
+      if (!isAuthenticated && !isOnPublicRoute) return AppRoutes.welcome;
 
       return null;
     },
@@ -103,6 +90,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.terms,
+        builder: (context, state) => const TermsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.privacy,
+        builder: (context, state) => const PrivacyScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.changelog,
+        builder: (context, state) => const ChangelogScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.help,
+        builder: (context, state) => const HelpScreen(),
       ),
     ],
   );
