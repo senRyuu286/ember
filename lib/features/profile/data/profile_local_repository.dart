@@ -13,25 +13,26 @@ class ProfileLocalRepository {
     return _rowToProfile(row);
   }
 
-  Future<void> upsertProfile(UserProfile profile) async {
-    await _db.into(_db.profileTable).insertOnConflictUpdate(
-          ProfileTableCompanion(
-            id: Value(profile.id),
-            username: Value(profile.username),
-            avatarId: Value(profile.avatarId),
-            bio: Value(profile.bio),
-            fitnessLevel: Value(profile.fitnessLevel.value),
-            streakCount: Value(profile.streakCount),
-            totalWorkoutsCompleted: Value(profile.totalWorkoutsCompleted),
-            emberXp: Value(profile.emberXp),
-            primaryGoal: Value(profile.primaryGoal.value),
-            unitSystem: Value(profile.unitSystem.value),
-            defaultRestTimerSeconds: Value(profile.defaultRestTimerSeconds),
-            theme: Value(profile.theme.value),
-            notificationsEnabled: Value(profile.notificationsEnabled),
-          ),
-        );
-  }
+Future<void> upsertProfile(UserProfile profile) async {
+  await _db.into(_db.profileTable).insertOnConflictUpdate(
+        ProfileTableCompanion(
+          id: Value(profile.id),
+          username: Value(profile.username),
+          avatarId: Value(profile.avatarId),
+          bio: Value(profile.bio),
+          fitnessLevel: Value(profile.fitnessLevel.value),
+          streakCount: Value(profile.streakCount),
+          totalWorkoutsCompleted: Value(profile.totalWorkoutsCompleted),
+          emberXp: Value(profile.emberXp),
+          primaryGoal: Value(profile.primaryGoal.value),
+          unitSystem: Value(profile.unitSystem.value),
+          defaultRestTimerSeconds: Value(profile.defaultRestTimerSeconds),
+          theme: Value(profile.theme.value),
+          notificationsEnabled: Value(profile.notificationsEnabled),
+          createdAt: Value(profile.createdAt.toIso8601String()),
+        ),
+      );
+}
 
   Future<void> updatePreference({
     String? avatarId,
@@ -68,21 +69,22 @@ class ProfileLocalRepository {
     await _db.delete(_db.profileTable).go();
   }
 
-  UserProfile _rowToProfile(ProfileTableData row) {
-    return UserProfile(
-      id: row.id,
-      username: row.username,
-      avatarId: row.avatarId,
-      bio: row.bio,
-      fitnessLevel: FitnessLevel.fromValue(row.fitnessLevel),
-      streakCount: row.streakCount,
-      totalWorkoutsCompleted: row.totalWorkoutsCompleted,
-      emberXp: row.emberXp,
-      primaryGoal: PrimaryGoal.fromValue(row.primaryGoal),
-      unitSystem: UnitSystem.fromValue(row.unitSystem),
-      defaultRestTimerSeconds: row.defaultRestTimerSeconds,
-      theme: ThemePreference.fromValue(row.theme),
-      notificationsEnabled: row.notificationsEnabled,
-    );
-  }
+UserProfile _rowToProfile(ProfileTableData row) {
+  return UserProfile(
+    id: row.id,
+    username: row.username,
+    avatarId: row.avatarId,
+    bio: row.bio,
+    fitnessLevel: FitnessLevel.fromValue(row.fitnessLevel),
+    streakCount: row.streakCount,
+    totalWorkoutsCompleted: row.totalWorkoutsCompleted,
+    emberXp: row.emberXp,
+    primaryGoal: PrimaryGoal.fromValue(row.primaryGoal),
+    unitSystem: UnitSystem.fromValue(row.unitSystem),
+    defaultRestTimerSeconds: row.defaultRestTimerSeconds,
+    theme: ThemePreference.fromValue(row.theme),
+    notificationsEnabled: row.notificationsEnabled,
+    createdAt: DateTime.tryParse(row.createdAt) ?? DateTime(2025, 1, 1),
+  );
+}
 }

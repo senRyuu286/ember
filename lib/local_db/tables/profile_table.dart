@@ -23,6 +23,7 @@ class ProfileTable extends Table {
   TextColumn get theme => text().withDefault(const Constant('system'))();
   BoolColumn get notificationsEnabled =>
       boolean().withDefault(const Constant(true))();
+  TextColumn get createdAt => text()();
 
   @override
   Set<Column> get primaryKey => {id};

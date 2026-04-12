@@ -162,6 +162,7 @@ class UserProfile {
   final int defaultRestTimerSeconds;
   final ThemePreference theme;
   final bool notificationsEnabled;
+  final DateTime createdAt;
 
   const UserProfile({
     required this.id,
@@ -177,6 +178,7 @@ class UserProfile {
     required this.defaultRestTimerSeconds,
     required this.theme,
     required this.notificationsEnabled,
+    required this.createdAt,
   });
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
@@ -202,8 +204,10 @@ class UserProfile {
       theme: ThemePreference.fromValue(
         (map['theme'] as String?) ?? 'system',
       ),
-      notificationsEnabled:
-          (map['notifications_enabled'] as bool?) ?? true,
+      notificationsEnabled: (map['notifications_enabled'] as bool?) ?? true,
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'] as String)
+          : DateTime(2025, 1, 1),
     );
   }
 
@@ -233,6 +237,7 @@ class UserProfile {
           defaultRestTimerSeconds ?? this.defaultRestTimerSeconds,
       theme: theme ?? this.theme,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      createdAt: createdAt,
     );
   }
 }
