@@ -27,34 +27,26 @@ final profileLocalRepositoryProvider = Provider<ProfileLocalRepository>((ref) {
 //   1. Serve the local Drift cache immediately (no loading spinner).
 //   2. Fetch fresh data from Supabase in the background.
 //   3. Write the fresh data back to Drift and emit the updated profile.
-//
-// This means the screen renders instantly with cached data, then silently
-// updates when the network response arrives.
 
 final userProfileProvider =
     AsyncNotifierProvider<UserProfileNotifier, UserProfile?>(
-      UserProfileNotifier.new,
-    );
+  UserProfileNotifier.new,
+);
 
 class UserProfileNotifier extends AsyncNotifier<UserProfile?> {
   @override
   Future<UserProfile?> build() async {
-    // Re-run whenever the auth state changes (sign in / sign out).
     ref.watch(currentUserProvider);
 
     final local = ref.read(profileLocalRepositoryProvider);
     final remote = ref.read(profileRepositoryProvider);
 
-    // Step 1: serve local cache immediately.
     final cached = await local.getProfile();
     if (cached != null) {
-      // Step 2: kick off background sync without awaiting.
       _syncFromRemote();
       return cached;
     }
 
-    // No cache yet (first launch after install / after sign-out cleared it).
-    // Fall through to a full remote fetch.
     final fresh = await remote.getProfile();
     if (fresh != null) {
       await local.upsertProfile(fresh);
@@ -62,8 +54,6 @@ class UserProfileNotifier extends AsyncNotifier<UserProfile?> {
     return fresh;
   }
 
-  // Fetches latest profile from Supabase and updates local cache + state.
-  // Called in the background after serving the cached value.
   Future<void> _syncFromRemote() async {
     final remote = ref.read(profileRepositoryProvider);
     final local = ref.read(profileLocalRepositoryProvider);
@@ -73,16 +63,12 @@ class UserProfileNotifier extends AsyncNotifier<UserProfile?> {
 
     await local.upsertProfile(fresh);
 
-    // Only update state if the data actually changed to avoid unnecessary
-    // rebuilds when the cached and remote values are identical.
     final current = state.asData?.value;
     if (current == null || _profilesDiffer(current, fresh)) {
       state = AsyncData(fresh);
     }
   }
 
-  // Optimistically update local state and cache, then write to Supabase.
-  // Used for preference fields that save immediately on change.
   Future<void> updatePreference({
     String? avatarId,
     FitnessLevel? fitnessLevel,
@@ -105,13 +91,9 @@ class UserProfileNotifier extends AsyncNotifier<UserProfile?> {
       notificationsEnabled: notificationsEnabled,
     );
 
-    // Optimistic update — screen reflects the change instantly.
     state = AsyncData(updated);
 
-    // Persist locally.
-    await ref
-        .read(profileLocalRepositoryProvider)
-        .updatePreference(
+    await ref.read(profileLocalRepositoryProvider).updatePreference(
           avatarId: avatarId,
           fitnessLevel: fitnessLevel?.value,
           primaryGoal: primaryGoal?.value,
@@ -121,11 +103,8 @@ class UserProfileNotifier extends AsyncNotifier<UserProfile?> {
           notificationsEnabled: notificationsEnabled,
         );
 
-    // Persist to Supabase.
     try {
-      await ref
-          .read(profileRepositoryProvider)
-          .updateProfile(
+      await ref.read(profileRepositoryProvider).updateProfile(
             avatarId: avatarId,
             fitnessLevel: fitnessLevel,
             primaryGoal: primaryGoal,
@@ -134,14 +113,9 @@ class UserProfileNotifier extends AsyncNotifier<UserProfile?> {
             theme: theme,
             notificationsEnabled: notificationsEnabled,
           );
-    } catch (_) {
-      // Remote write failed -- local state is still updated.
-      // A background sync on next launch will reconcile if needed.
-      // Silently swallow -- preferences are low-stakes data.
-    }
+    } catch (_) {}
   }
 
-  // Saves bio and fitnessLevel on Done tap.
   Future<void> saveEditableFields({
     required String bio,
     required FitnessLevel fitnessLevel,
@@ -152,17 +126,17 @@ class UserProfileNotifier extends AsyncNotifier<UserProfile?> {
     final updated = current.copyWith(bio: bio, fitnessLevel: fitnessLevel);
     state = AsyncData(updated);
 
-    await ref
-        .read(profileLocalRepositoryProvider)
-        .updatePreference(bio: bio, fitnessLevel: fitnessLevel.value);
+    await ref.read(profileLocalRepositoryProvider).updatePreference(
+          bio: bio,
+          fitnessLevel: fitnessLevel.value,
+        );
 
     try {
-      await ref
-          .read(profileRepositoryProvider)
-          .updateProfile(bio: bio, fitnessLevel: fitnessLevel);
-    } catch (_) {
-      // Same silent-fail strategy as updatePreference.
-    }
+      await ref.read(profileRepositoryProvider).updateProfile(
+            bio: bio,
+            fitnessLevel: fitnessLevel,
+          );
+    } catch (_) {}
   }
 
   bool _profilesDiffer(UserProfile a, UserProfile b) {

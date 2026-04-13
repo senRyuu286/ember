@@ -23,7 +23,12 @@ class ProfileTable extends Table {
   TextColumn get theme => text().withDefault(const Constant('system'))();
   BoolColumn get notificationsEnabled =>
       boolean().withDefault(const Constant(true))();
-  TextColumn get createdAt => text()();
+
+  // Empty string default so existing rows migrated from schema v2
+  // do not fail to read. profile_local_repository handles the empty
+  // string by falling back to DateTime(2025, 1, 1).
+  TextColumn get createdAt =>
+      text().withDefault(const Constant(''))();
 
   @override
   Set<Column> get primaryKey => {id};

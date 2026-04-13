@@ -47,3 +47,5 @@ flutter:
     - assets/logo/
     - assets/illustrations/
     - assets/avatars/
+    - assets/body/
+    - assets/exercises/

@@ -6,15 +6,18 @@ import 'package:path_provider/path_provider.dart';
 import 'tables/profile_table.dart';
 import 'tables/workout_session_table.dart';
 import 'tables/weekly_burn_table.dart';
+import 'tables/exercise_table.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [ProfileTable, WorkoutSessionTable, WeeklyBurnTable])
+@DriftDatabase(
+  tables: [ProfileTable, WorkoutSessionTable, WeeklyBurnTable, ExerciseTable],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -24,10 +27,10 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createTable(weeklyBurnTable);
           }
           if (from < 3) {
-            await migrator.addColumn(
-              profileTable,
-              profileTable.createdAt,
-            );
+            await migrator.addColumn(profileTable, profileTable.createdAt);
+          }
+          if (from < 4) {
+            await migrator.createTable(exerciseTable);
           }
         },
       );
