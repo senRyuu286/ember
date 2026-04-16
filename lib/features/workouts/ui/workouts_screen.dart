@@ -1,82 +1,173 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ember/core/theme/app_colors.dart';
+import 'package:ember/core/router/app_routes.dart';
+import 'package:ember/features/profile/providers/profile_provider.dart';
+import 'package:ember/features/workouts/data/workout_models.dart';
+import 'package:ember/features/workouts/data/plan_models.dart';
+import 'package:ember/features/workouts/providers/workout_provider.dart';
+import 'package:ember/features/workouts/providers/plan_provider.dart';
 
-/// WorkoutsScreen: Manages custom routines and built-in templates.
-/// Follows the "feature-first" structure under features/workouts/ui/.
-class WorkoutsScreen extends StatefulWidget {
+class WorkoutsScreen extends ConsumerStatefulWidget {
   const WorkoutsScreen({super.key});
 
   @override
-  State<WorkoutsScreen> createState() => _WorkoutsScreenState();
+  ConsumerState<WorkoutsScreen> createState() =>
+      _WorkoutsScreenState();
 }
 
-class _WorkoutsScreenState extends State<WorkoutsScreen> {
-  static const Color _bgColor = AppColors.lightSurfaceVariant;
+class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
+    with SingleTickerProviderStateMixin {
   static const Color _primaryOrange = AppColors.primary;
-  static const Color _surfaceColor = AppColors.lightBackground;
+  late final TabController _tabController;
+  late final TextEditingController _searchController;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _searchController = TextEditingController();
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bgColor,
-      // Removed the fixed AppBar so the top bar scrolls with the content
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+    final textTheme = Theme.of(context).textTheme;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: isDark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        body: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTopBar(),
-              const SizedBox(height: 24),
-              _buildSearchBar(),
-              const SizedBox(height: 24),
-              _buildCreateRoutineButton(),
-              const SizedBox(height: 36),
+              // ── Top bar ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      'assets/logo/logo-primary@2x.png',
+                      width: 32,
+                      height: 32,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.local_fire_department,
+                        color: _primaryOrange,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'The Armory',
+                      style: textTheme.displayMedium?.copyWith(
+                        fontSize: 28,
+                        color: colorScheme.onSurface,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
 
-              _buildSectionHeader(
-                "Your Ignition Plans",
-                Icons.local_fire_department,
+              // ── Search ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: colorScheme.outline),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search routines or plans...',
+                      hintStyle: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.7),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        size: 20,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear_rounded,
+                                  size: 18,
+                                  color: colorScheme.onSurfaceVariant),
+                              onPressed: _searchController.clear,
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
-              _buildRoutineCard(
-                title: "Upper Body Hypertrophy",
-                duration: "45 min",
-                exerciseCount: 6,
-                targetMuscles: ["Chest", "Back", "Shoulders"],
-                lastPerformed: "Yesterday",
-              ),
-              const SizedBox(height: 16),
-              _buildRoutineCard(
-                title: "Leg Day A",
-                duration: "60 min",
-                exerciseCount: 5,
-                targetMuscles: ["Quads", "Hamstrings", "Glutes", "Calves"],
-                lastPerformed: "3 days ago",
-              ),
 
-              const SizedBox(height: 40),
+              // ── Tabs ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicator: BoxDecoration(
+                      color: _primaryOrange,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    labelColor: Colors.white,
+                    unselectedLabelColor:
+                        colorScheme.onSurfaceVariant,
+                    labelStyle: textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                    tabs: const [
+                      Tab(text: 'Routines'),
+                      Tab(text: 'Plans'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
 
-              _buildSectionHeader("Ember Built-ins", Icons.bolt),
-              const SizedBox(height: 16),
-              _buildRoutineCard(
-                title: "Ember Push",
-                duration: "50 min",
-                exerciseCount: 6,
-                targetMuscles: ["Chest", "Triceps", "Shoulders"],
-              ),
-              const SizedBox(height: 16),
-              _buildRoutineCard(
-                title: "Ember Pull",
-                duration: "50 min",
-                exerciseCount: 6,
-                targetMuscles: ["Back", "Biceps", "Forearms"],
-              ),
-              const SizedBox(height: 16),
-              _buildRoutineCard(
-                title: "Full Body Foundation",
-                duration: "75 min",
-                exerciseCount: 8,
-                targetMuscles: ["Full Body", "Core"],
+              // ── Tab content ──
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _RoutinesTab(searchQuery: _searchQuery),
+                    _PlansTab(searchQuery: _searchQuery),
+                  ],
+                ),
               ),
             ],
           ),
@@ -84,99 +175,240 @@ class _WorkoutsScreenState extends State<WorkoutsScreen> {
       ),
     );
   }
+}
 
-  // 1. Top Bar: Custom Logo and Title (Scrolls with content)
-  Widget _buildTopBar() {
+// ─────────────────────────────────────────────────────────────────────────────
+// Routines tab
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _RoutinesTab extends ConsumerWidget {
+  const _RoutinesTab({required this.searchQuery});
+  final String searchQuery;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final routinesAsync = ref.watch(routineListProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    return Row(
-      children: [
-        // Custom Logo Asset
-        Image.asset(
-          'assets/logo/logo-primary@2x.png',
-          width: 32,
-          height: 32,
-          errorBuilder: (context, error, stackTrace) {
-            // Fallback just in case asset isn't loaded yet
-            return const Icon(
-              Icons.local_fire_department,
-              color: _primaryOrange,
-              size: 32,
-            );
-          },
+    final profileAsync = ref.watch(userProfileProvider);
+    final restTimer =
+        profileAsync.asData?.value?.defaultRestTimerSeconds ?? 60;
+
+    return routinesAsync.when(
+      loading: () =>
+          const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                size: 48, color: AppColors.error),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => ref.invalidate(routineListProvider),
+              child: const Text('Retry'),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Text(
-          "The Armory",
-          style: textTheme.displayMedium?.copyWith(
-            fontSize: 28,
-            color: colorScheme.onSurface,
-            letterSpacing: -0.5,
-          ),
-        ),
-      ],
+      ),
+      data: (routines) {
+        final filtered = searchQuery.isEmpty
+            ? routines
+            : routines
+                .where((r) =>
+                    r.title.toLowerCase().contains(searchQuery))
+                .toList();
+
+        final builtIns =
+            filtered.where((r) => r.isBuiltIn).toList();
+        final userRoutines =
+            filtered.where((r) => !r.isBuiltIn).toList();
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+          children: [
+            _ForgeButton(
+              label: 'Forge New Routine',
+              onTap: () => context.push(AppRoutes.createRoutine),
+            ),
+            const SizedBox(height: 28),
+
+            if (userRoutines.isNotEmpty) ...[
+              _SectionHeader(
+                title: 'Your Ignition Plans',
+                icon: Icons.local_fire_department_rounded,
+                count: userRoutines.length,
+              ),
+              const SizedBox(height: 12),
+              ...userRoutines.map(
+                (r) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _RoutineCard(
+                    routine: r,
+                    restTimerSeconds: restTimer,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            _SectionHeader(
+              title: 'Ember Built-ins',
+              icon: Icons.bolt_rounded,
+              count: builtIns.length,
+            ),
+            const SizedBox(height: 12),
+            if (builtIns.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text(
+                    'No routines found.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...builtIns.map(
+                (r) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _RoutineCard(
+                    routine: r,
+                    restTimerSeconds: restTimer,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
+}
 
-  // 2. Search Bar
-  Widget _buildSearchBar() {
+// ─────────────────────────────────────────────────────────────────────────────
+// Plans tab
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PlansTab extends ConsumerWidget {
+  const _PlansTab({required this.searchQuery});
+  final String searchQuery;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plansAsync = ref.watch(planListProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: _surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: "Search routines & templates...",
-          hintStyle: textTheme.bodyMedium?.copyWith(
-            fontSize: 14,
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-          ),
-          prefixIcon: Icon(
-            Icons.search,
-            size: 20,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+
+    return plansAsync.when(
+      loading: () =>
+          const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                size: 48, color: AppColors.error),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => ref.invalidate(planListProvider),
+              child: const Text('Retry'),
+            ),
+          ],
         ),
       ),
+      data: (plans) {
+        final filtered = searchQuery.isEmpty
+            ? plans
+            : plans
+                .where((p) =>
+                    p.title.toLowerCase().contains(searchQuery))
+                .toList();
+
+        final builtIns =
+            filtered.where((p) => p.isBuiltIn).toList();
+        final userPlans =
+            filtered.where((p) => !p.isBuiltIn).toList();
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+          children: [
+            _ForgeButton(
+              label: 'Forge New Plan',
+              onTap: () => context.push(AppRoutes.createPlan),
+            ),
+            const SizedBox(height: 28),
+
+            if (userPlans.isNotEmpty) ...[
+              _SectionHeader(
+                title: 'Your Plans',
+                icon: Icons.local_fire_department_rounded,
+                count: userPlans.length,
+              ),
+              const SizedBox(height: 12),
+              ...userPlans.map(
+                (p) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _PlanCard(plan: p),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            _SectionHeader(
+              title: 'Ember Built-ins',
+              icon: Icons.bolt_rounded,
+              count: builtIns.length,
+            ),
+            const SizedBox(height: 12),
+            if (builtIns.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text(
+                    'No plans found.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...builtIns.map(
+                (p) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _PlanCard(plan: p),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
+}
 
-  // 3. Primary Action Button
-  Widget _buildCreateRoutineButton() {
-    final textTheme = Theme.of(context).textTheme;
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared forge button
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ForgeButton extends StatelessWidget {
+  const _ForgeButton({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 60,
+      height: 56,
       child: ElevatedButton.icon(
         onPressed: () {
-          // Future: Navigate to routine creator
+          HapticFeedback.lightImpact();
+          onTap();
         },
-        icon: const Icon(
-          Icons.add_circle_outline,
-          color: Colors.white,
-          size: 24,
-        ),
-        label: Text(
-          "Forge New Routine",
-          style: textTheme.labelLarge?.copyWith(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
+        icon: const Icon(Icons.add_rounded, size: 22),
+        label: Text(label),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.darkSurface,
           foregroundColor: Colors.white,
@@ -188,154 +420,380 @@ class _WorkoutsScreenState extends State<WorkoutsScreen> {
       ),
     );
   }
+}
 
-  // Section Header Helper
-  Widget _buildSectionHeader(String title, IconData icon) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Section header
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.icon,
+    required this.count,
+  });
+  final String title;
+  final IconData icon;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
     return Row(
       children: [
-        Icon(icon, color: _primaryOrange, size: 22),
+        Icon(icon, color: AppColors.primary, size: 20),
         const SizedBox(width: 8),
         Text(
           title,
-          style: textTheme.headlineLarge?.copyWith(
-            fontSize: 20,
+          style: textTheme.headlineMedium?.copyWith(
+            fontSize: 18,
             color: colorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '$count',
+            style: textTheme.labelSmall?.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
           ),
         ),
       ],
     );
   }
+}
 
-  // 4. Unified Custom Routine & Template Card
-  Widget _buildRoutineCard({
-    required String title,
-    required String duration,
-    required int exerciseCount,
-    required List<String> targetMuscles,
-    String? lastPerformed,
-  }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Routine card  (now uses RoutineSummary)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _RoutineCard extends ConsumerWidget {
+  const _RoutineCard({
+    required this.routine,
+    required this.restTimerSeconds,
+  });
+  final RoutineSummary routine;
+  final int restTimerSeconds;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _surfaceColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: textTheme.headlineLarge?.copyWith(
-                    fontSize: 20,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: AppColors.lightTextDisabled,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
 
-          // Badges: Duration & Exercise Count
-          Row(
-            children: [
-              _buildRoutineBadge(Icons.timer_outlined, duration),
-              const SizedBox(width: 16),
-              _buildRoutineBadge(
-                Icons.fitness_center,
-                "$exerciseCount exercises",
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+    final lastPerformed = routine.lastPerformedAt;
+    final duration = routine.formattedDuration(restTimerSeconds);
 
-          // Muscle Group Tags
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: targetMuscles
-                .map((muscle) => _buildMuscleTag(muscle))
-                .toList(),
-          ),
-
-          // Conditional "Last Performed" footer
-          if (lastPerformed != null) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.0),
-              child: Divider(height: 1, color: _bgColor),
-            ),
-            Text(
-              "Last performed: $lastPerformed",
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.push(
+          AppRoutes.routineDetail.replaceFirst(':id', routine.id),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: colorScheme.outline),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Title + badge + arrow ──
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    routine.title,
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontSize: 17,
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (routine.isBuiltIn)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color:
+                          AppColors.accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Built-in',
+                      style: textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.4),
+                ),
+              ],
+            ),
+            if (routine.description != null &&
+                routine.description!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                routine.description!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+
+            // ── Badges ──
+            Row(
+              children: [
+                _RoutineBadge(
+                  icon: Icons.timer_outlined,
+                  label: duration,
+                ),
+                const SizedBox(width: 16),
+                _RoutineBadge(
+                  icon: Icons.fitness_center_rounded,
+                  label: '${routine.exerciseCount} exercises',
+                ),
+              ],
+            ),
+
+            // ── Last performed ──
+            if (lastPerformed != null) ...[
+              const SizedBox(height: 12),
+              Divider(height: 1, color: colorScheme.outlineVariant),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(Icons.history_rounded,
+                      size: 13,
+                      color: colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Last: ${_formatLastPerformed(lastPerformed)}',
+                    style: textTheme.labelSmall?.copyWith(
+                      fontSize: 11,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  // Badge Helper
-  Widget _buildRoutineBadge(IconData icon, String label) {
+  String _formatLastPerformed(DateTime date) {
+    final diff = DateTime.now().difference(date).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    if (diff < 7) return '$diff days ago';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+class _RoutineBadge extends StatelessWidget {
+  const _RoutineBadge({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
     return Row(
       children: [
-        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+        Icon(icon, size: 14, color: colorScheme.onSurfaceVariant),
         const SizedBox(width: 4),
         Text(
           label,
-          style: textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurface,
-            fontSize: 13,
+          style: textTheme.labelSmall?.copyWith(
+            fontSize: 12,
+            color: colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w500,
           ),
         ),
       ],
     );
   }
+}
 
-  // Muscle Tag Helper
-  Widget _buildMuscleTag(String muscle) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({required this.plan});
+  final WorkoutPlanSummary plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: _primaryOrange.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _primaryOrange.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        muscle,
-        style: textTheme.labelSmall?.copyWith(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: _primaryOrange,
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.push(
+          AppRoutes.planDetail.replaceFirst(':id', plan.id),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: plan.isActive
+                ? AppColors.primary
+                : colorScheme.outline,
+            width: plan.isActive ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    plan.title,
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontSize: 17,
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (plan.isActive)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color:
+                          AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Active',
+                      style: textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  )
+                else if (plan.isBuiltIn)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color:
+                          AppColors.accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Built-in',
+                      style: textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.4),
+                ),
+              ],
+            ),
+            if (plan.description != null &&
+                plan.description!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                plan.description!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _RoutineBadge(
+                  icon: Icons.calendar_month_rounded,
+                  label: plan.durationLabel,
+                ),
+                if (plan.isActive && plan.startedAt != null) ...[
+                  const SizedBox(width: 16),
+                  _RoutineBadge(
+                    icon: Icons.play_circle_outline_rounded,
+                    label:
+                        'Started ${_formatDate(plan.startedAt!)}',
+                  ),
+                ],
+              ],
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final diff = DateTime.now().difference(date).inDays;
+    if (diff == 0) return 'today';
+    if (diff == 1) return 'yesterday';
+    if (diff < 7) return '$diff days ago';
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

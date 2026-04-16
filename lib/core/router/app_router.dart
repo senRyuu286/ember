@@ -11,7 +11,16 @@ import 'package:ember/features/legal/ui/terms_screen.dart';
 import 'package:ember/features/legal/ui/privacy_screen.dart';
 import 'package:ember/features/legal/ui/changelog_screen.dart';
 import 'package:ember/features/legal/ui/help_screen.dart';
-import 'package:flutter/foundation.dart';
+import 'package:ember/features/workouts/data/workout_models.dart';
+import 'package:ember/features/workouts/data/plan_models.dart';
+import 'package:ember/features/workouts/providers/workout_provider.dart';
+import 'package:ember/features/workouts/ui/routine_detail_screen.dart';
+import 'package:ember/features/workouts/ui/create_edit_routine_screen.dart';
+import 'package:ember/features/workouts/ui/session_screen.dart';
+import 'package:ember/features/workouts/ui/session_complete_screen.dart';
+import 'package:ember/features/workouts/ui/plan_detail_screen.dart';
+import 'package:ember/features/workouts/ui/create_edit_plan_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'app_routes.dart';
@@ -106,6 +115,58 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.help,
         builder: (context, state) => const HelpScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.createRoutine,
+        builder: (context, state) => const CreateEditRoutineScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.routineDetail,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return RoutineDetailScreen(routineId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.editRoutine,
+        builder: (context, state) {
+          final routine = state.extra as Routine?;
+          return CreateEditRoutineScreen(existingRoutine: routine);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.session,
+        builder: (context, state) => const SessionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.sessionComplete,
+        builder: (context, state) {
+          final summary = state.extra as WorkoutSummary?;
+          if (summary == null) {
+            // Guard: if navigated without summary, go home.
+            return const SizedBox.shrink();
+            
+          }
+          return SessionCompleteScreen(summary: summary);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.createPlan,
+        builder: (context, state) => const CreateEditPlanScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.planDetail,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PlanDetailScreen(planId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.editPlan,
+        builder: (context, state) {
+          final plan = state.extra as WorkoutPlan?;
+          return CreateEditPlanScreen(existingPlan: plan);
+        },
       ),
     ],
   );

@@ -13,4 +13,12 @@ class AppRoutes {
   static const String privacy = '/privacy';
   static const String changelog = '/changelog';
   static const String help = '/help';
+  static const String routineDetail = '/routine/:id';
+  static const String createRoutine = '/routine/create';
+  static const String editRoutine = '/routine/:id/edit';
+  static const String session = '/session';
+  static const String sessionComplete = '/session/complete';
+  static const String planDetail = '/plan/:id';
+  static const String createPlan = '/plan/create';
+  static const String editPlan = '/plan/:id/edit';
 }

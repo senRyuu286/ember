@@ -7,17 +7,38 @@ import 'tables/profile_table.dart';
 import 'tables/workout_session_table.dart';
 import 'tables/weekly_burn_table.dart';
 import 'tables/exercise_table.dart';
+import 'tables/routine_table.dart';
+import 'tables/routine_exercise_table.dart';
+import 'tables/workout_plan_table.dart';
+import 'tables/plan_day_table.dart';
+import 'tables/plan_day_routine_table.dart';
+import 'daos/routine_dao.dart';
+import 'daos/plan_dao.dart';
 
 part 'app_database.g.dart';
 
 @DriftDatabase(
-  tables: [ProfileTable, WorkoutSessionTable, WeeklyBurnTable, ExerciseTable],
+  tables: [
+    ProfileTable,
+    WorkoutSessionTable,
+    WeeklyBurnTable,
+    ExerciseTable,
+    RoutineTable,
+    RoutineExerciseTable,
+    WorkoutPlanTable,
+    PlanDayTable,
+    PlanDayRoutineTable,
+  ],
+  daos: [
+    RoutineDao,
+    PlanDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -31,6 +52,19 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await migrator.createTable(exerciseTable);
+          }
+          if (from < 5) {
+            await migrator.createTable(routineTable);
+            await migrator.createTable(routineExerciseTable);
+          }
+          if (from < 6) {
+            await migrator.addColumn(
+                routineTable, routineTable.lastPerformedAt);
+          }
+          if (from < 7) {
+            await migrator.createTable(workoutPlanTable);
+            await migrator.createTable(planDayTable);
+            await migrator.createTable(planDayRoutineTable);
           }
         },
       );
