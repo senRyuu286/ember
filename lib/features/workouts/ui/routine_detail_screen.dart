@@ -6,6 +6,7 @@ import 'package:ember/core/theme/app_colors.dart';
 import 'package:ember/core/router/app_routes.dart';
 import 'package:ember/features/exercises/ui/exercise_detail_sheet.dart';
 import 'package:ember/features/profile/providers/profile_provider.dart';
+import 'package:ember/features/session/providers/session_provider.dart';
 import 'package:ember/features/workouts/data/workout_models.dart';
 import 'package:ember/features/workouts/providers/workout_provider.dart';
 

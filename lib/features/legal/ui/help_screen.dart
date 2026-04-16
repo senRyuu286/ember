@@ -1,57 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ember/core/theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../domain/entities/legal_entities.dart';
+import '../providers/legal_provider.dart';
 
-class HelpScreen extends StatelessWidget {
+class HelpScreen extends ConsumerWidget {
   const HelpScreen({super.key});
 
   static const Color _primaryOrange = AppColors.primary;
-  static const String _supportEmail = 'justinramas12@outlook.com';
-  static const String _appVersion = '1.0.0';
 
-  static const List<_FaqItem> _faqs = [
-    _FaqItem(
-      question: 'How do I reset my password?',
-      answer:
-          'On the Sign In screen, tap "Forgot Password" and enter your email address. You will receive a password reset link in your inbox. Check your spam folder if it does not arrive within a few minutes.',
-    ),
-    _FaqItem(
-      question: 'My workout data is not syncing. What do I do?',
-      answer:
-          'Ember syncs your data with Supabase whenever you have an internet connection. If data is not syncing, check your internet connection and try closing and reopening the app. Your data is also cached locally on your device, so nothing is lost while offline.',
-    ),
-    _FaqItem(
-      question: 'Can I use Ember without internet?',
-      answer:
-          'Yes. Ember caches your profile and workout data locally on your device using SQLite. You can log workouts and view your history without an internet connection. Your data will sync to the cloud the next time you are online.',
-    ),
-    _FaqItem(
-      question: 'How do I delete my account?',
-      answer:
-          'A self-service account deletion feature is coming in a future update. In the meantime, send an email to $_supportEmail with the subject "Account Deletion Request" and include your registered email address. We will delete your account and all associated data within 30 days.',
-    ),
-    _FaqItem(
-      question: 'Why did I lose my data after logging out?',
-      answer:
-          'When you log out, Ember clears its local cache to protect your data on shared devices. Your data is safely stored in the cloud and will be restored the next time you log in with your account.',
-    ),
-    _FaqItem(
-      question: 'What does Ember XP do?',
-      answer:
-          'Ember XP is earned every time you complete a workout session. Each exercise has its own XP value, and your total XP reflects your overall training volume over time. More XP mechanics and rewards are planned for future updates.',
-    ),
-    _FaqItem(
-      question: 'Can I share my workout routines with friends?',
-      answer:
-          'Routine sharing between friends is a planned feature and is not yet available in this version of Ember. Stay tuned for future updates.',
-    ),
-  ];
-
-  Future<void> _launchEmail({required String subject, String body = ''}) async {
+  Future<void> _launchEmail({
+    required String supportEmail,
+    required String subject,
+    String body = '',
+  }) async {
     final uri = Uri(
       scheme: 'mailto',
-      path: _supportEmail,
+      path: supportEmail,
       queryParameters: {
         'subject': subject,
         if (body.isNotEmpty) 'body': body,
@@ -63,7 +30,11 @@ class HelpScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final supportEmail = ref.watch(supportEmailProvider);
+    final appVersion = ref.watch(legalAppVersionProvider);
+    final faqs = ref.watch(legalFaqsProvider);
+
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isDark = colorScheme.brightness == Brightness.dark;
@@ -211,14 +182,14 @@ class HelpScreen extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
                           child: Column(
-                            children: _faqs
+                            children: faqs
                                 .asMap()
                                 .entries
                                 .map(
                                   (entry) => _FaqTile(
                                     item: entry.value,
                                     showDivider:
-                                        entry.key < _faqs.length - 1,
+                                        entry.key < faqs.length - 1,
                                   ),
                                 )
                                 .toList(),
@@ -244,14 +215,15 @@ class HelpScreen extends StatelessWidget {
                         onTap: () {
                           HapticFeedback.lightImpact();
                           _launchEmail(
-                            subject: 'Bug Report — Ember v$_appVersion',
+                            supportEmail: supportEmail,
+                            subject: 'Bug Report — Ember v$appVersion',
                             body:
                                 'Describe the bug:\n\n'
                                 'Steps to reproduce:\n1.\n2.\n3.\n\n'
                                 'Expected behavior:\n\n'
                                 'Actual behavior:\n\n'
                                 'Device and OS:\n\n'
-                                'App version: $_appVersion',
+                                'App version: $appVersion',
                           );
                         },
                       ),
@@ -267,6 +239,7 @@ class HelpScreen extends StatelessWidget {
                         onTap: () {
                           HapticFeedback.lightImpact();
                           _launchEmail(
+                            supportEmail: supportEmail,
                             subject: 'Ember Support Request',
                           );
                         },
@@ -276,7 +249,7 @@ class HelpScreen extends StatelessWidget {
                       // ── Footer ──
                       Center(
                         child: Text(
-                          'Ember v$_appVersion · Made with 🔥 by senRyuu286',
+                          'Ember v$appVersion · Made with 🔥 by senRyuu286',
                           style: textTheme.labelSmall?.copyWith(
                             color: colorScheme.onSurfaceVariant
                                 .withValues(alpha: 0.5),
@@ -294,16 +267,6 @@ class HelpScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Data model
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _FaqItem {
-  const _FaqItem({required this.question, required this.answer});
-  final String question;
-  final String answer;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -351,7 +314,7 @@ class _SectionLabel extends StatelessWidget {
 
 class _FaqTile extends StatefulWidget {
   const _FaqTile({required this.item, required this.showDivider});
-  final _FaqItem item;
+  final LegalFaqItem item;
   final bool showDivider;
 
   @override

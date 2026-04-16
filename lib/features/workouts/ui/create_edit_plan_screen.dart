@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ember/core/theme/app_colors.dart';
 import 'package:ember/features/workouts/data/plan_models.dart';
+import 'package:ember/features/workouts/presentation/state/create_edit_plan_state.dart';
 import 'package:ember/features/workouts/providers/plan_provider.dart';
 import 'package:ember/features/workouts/providers/workout_provider.dart';
 
@@ -253,11 +254,10 @@ class CreateEditPlanScreen extends ConsumerWidget {
 
   Future<void> _save(BuildContext context, WidgetRef ref) async {
     HapticFeedback.mediumImpact();
-    final repo = ref.read(planRepositoryProvider);
     final notifier =
         ref.read(createEditPlanProvider(existingPlan).notifier);
     try {
-      await notifier.save(repo, existingPlan?.id);
+      await notifier.save(existingPlan?.id);
       await ref.read(planListProvider.notifier).refresh();
       ref.invalidate(createEditPlanProvider(existingPlan));
       if (context.mounted) context.pop();

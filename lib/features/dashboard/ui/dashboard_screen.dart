@@ -1,55 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ember/core/theme/app_colors.dart';
-
-// Expanded enum to distinguish between a missed day and a future day
-enum DayState { active, rest, missed, future }
+import 'package:ember/features/dashboard/domain/entities/dashboard_entities.dart';
+import 'package:ember/features/dashboard/providers/dashboard_provider.dart';
 
 /// DashboardScreen: The primary entry point for Ember.
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
   // Brand Colors
   static const Color _bgColor = AppColors.lightSurfaceVariant;
   static const Color _primaryOrange = AppColors.primary;
   static const Color _surfaceColor = AppColors.lightBackground;
 
-  // Mock State
-  final int _currentStreak = 5;
-  final int _restDaysTaken = 1; // Max 3 per week
-
-  // Active challenge state (set to null to see the "Choose one" state)
-  final Map<String, dynamic> _activeChallenge = {
-    "title": "4-Week Full Body",
-    "subtitle": "Build foundational strength",
-    "progress": 0.25,
-    "daysLeft": "21 days left",
-  };
-
-  final List<Map<String, String>> _availableChallenges = [
-    {
-      "title": "14-Day Core Crusher",
-      "subtitle": "Daily ab incinerator",
-      "duration": "2 Weeks",
-    },
-    {
-      "title": "Pull-Up Mastery",
-      "subtitle": "Conquer the bar",
-      "duration": "4 Weeks",
-    },
-    {
-      "title": "Cardio Engine",
-      "subtitle": "Boost your VO2 Max",
-      "duration": "3 Weeks",
-    },
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(dashboardStateProvider);
+
     return Scaffold(
       backgroundColor: _bgColor,
       body: SafeArea(
@@ -58,13 +25,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTopBar(streak: _currentStreak),
+              _buildTopBar(context, streak: state.currentStreak),
               const SizedBox(height: 32),
-              _buildWeeklySummary(restDays: _restDaysTaken),
+              _buildWeeklySummary(
+                context,
+                restDays: state.restDaysTaken,
+                dayStates: state.weeklyDayStates,
+              ),
               const SizedBox(height: 32),
-              _buildChallengesSection(),
+              _buildChallengesSection(context, state),
               const SizedBox(height: 32),
-              _buildSparkFeed(),
+              _buildSparkFeed(context),
             ],
           ),
         ),
@@ -73,7 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // 1. Top Bar: Custom Logo, App Name, Search, Streak
-  Widget _buildTopBar({required int streak}) {
+  Widget _buildTopBar(BuildContext context, {required int streak}) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -169,21 +140,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // 2. Weekly Summary with Rest Days Counter
-  Widget _buildWeeklySummary({required int restDays}) {
+  Widget _buildWeeklySummary(
+    BuildContext context, {
+    required int restDays,
+    required List<DashboardDayState> dayStates,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final days = ["M", "T", "W", "T", "F", "S", "S"];
-
-    // Mock data: Monday active, Tuesday missed, Wednesday active, Thursday rest, Friday-Sunday future
-    final dayStates = [
-      DayState.active,
-      DayState.missed, // <-- Missed day (no exercise, not a rest day)
-      DayState.active,
-      DayState.rest,
-      DayState.future,
-      DayState.future,
-      DayState.future,
-    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,7 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Widget innerWidget;
 
             switch (state) {
-              case DayState.active:
+              case DashboardDayState.active:
                 boxColor = _primaryOrange;
                 innerWidget = const Icon(
                   Icons.check,
@@ -230,7 +194,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Colors.white,
                 );
                 break;
-              case DayState.rest:
+              case DashboardDayState.rest:
                 boxColor = colorScheme.onSurface.withValues(alpha: 0.12);
                 innerWidget = Container(
                   width: 12,
@@ -241,7 +205,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ); // Subdued dash indicator
                 break;
-              case DayState.missed:
+              case DashboardDayState.missed:
                 boxColor = Colors.transparent;
                 boxBorder = Border.all(
                   color: colorScheme.outline.withValues(alpha: 0.6),
@@ -253,7 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: colorScheme.onSurface.withValues(alpha: 0.35),
                 );
                 break;
-              case DayState.future:
+              case DashboardDayState.future:
                 boxColor = colorScheme.surface.withValues(alpha: 0.7);
                 innerWidget = const SizedBox.shrink();
                 break;
@@ -288,7 +252,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // 3. Challenges Section (Active + Available Carousel)
-  Widget _buildChallengesSection() {
+  Widget _buildChallengesSection(BuildContext context, DashboardState state) {
     final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,10 +265,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         // Top Card: Active Challenge or Empty State
         _buildActiveChallengeCard(
-          title: _activeChallenge["title"],
-          subtitle: _activeChallenge["subtitle"],
-          progress: _activeChallenge["progress"],
-          daysLeft: _activeChallenge["daysLeft"],
+          context,
+          title: state.activeChallenge?.title ?? 'No Active Challenge',
+          subtitle: state.activeChallenge?.subtitle ?? 'Choose one to get started',
+          progress: state.activeChallenge?.progress ?? 0,
+          daysLeft: state.activeChallenge?.daysLeft ?? '',
         ),
 
         const SizedBox(height: 24),
@@ -319,13 +284,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           height: 140,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: _availableChallenges.length,
+            itemCount: state.availableChallenges.length,
             itemBuilder: (context, index) {
-              final challenge = _availableChallenges[index];
+              final challenge = state.availableChallenges[index];
               return _buildAvailableChallengeCard(
-                title: challenge["title"]!,
-                subtitle: challenge["subtitle"]!,
-                duration: challenge["duration"]!,
+                context,
+                title: challenge.title,
+                subtitle: challenge.subtitle,
+                duration: challenge.duration,
               );
             },
           ),
@@ -334,7 +300,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildActiveChallengeCard({
+  Widget _buildActiveChallengeCard(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required double progress,
@@ -412,7 +379,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildAvailableChallengeCard({
+  Widget _buildAvailableChallengeCard(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required String duration,
@@ -471,7 +439,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // 4. The Spark Feed
-  Widget _buildSparkFeed() {
+  Widget _buildSparkFeed(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     return Column(

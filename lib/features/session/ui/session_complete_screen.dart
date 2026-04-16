@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ember/core/theme/app_colors.dart';
 import 'package:ember/core/router/app_routes.dart';
-import 'package:ember/features/workouts/providers/workout_provider.dart';
+import 'package:ember/features/session/data/models/session_models.dart';
 
 class SessionCompleteScreen extends StatelessWidget {
   const SessionCompleteScreen({super.key, required this.summary});

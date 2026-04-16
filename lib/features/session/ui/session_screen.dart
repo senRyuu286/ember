@@ -7,7 +7,8 @@ import 'package:ember/core/theme/app_colors.dart';
 import 'package:ember/core/router/app_routes.dart';
 import 'package:ember/features/exercises/data/exercise_models.dart';
 import 'package:ember/features/exercises/ui/exercise_detail_sheet.dart';
-import 'package:ember/features/workouts/providers/workout_provider.dart';
+import 'package:ember/features/session/data/models/session_models.dart';
+import 'package:ember/features/session/providers/session_provider.dart';
 import 'package:ember/features/workouts/data/workout_models.dart';
 import 'package:ember/features/profile/providers/profile_provider.dart';
 
@@ -144,26 +145,17 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       }
     }
 
-    await _writeSession(session);
+    await _writeSession();
   }
 
-  Future<void> _writeSession(SessionState session) async {
+  Future<void> _writeSession() async {
     final notifier = ref.read(activeSessionProvider.notifier);
-    final repo = ref.read(workoutRepositoryProvider);
 
     // Build summary BEFORE clearing state.
     final summary = notifier.buildSummary(_elapsedSeconds);
-    final loggedSets = notifier.collectLoggedSets();
-    final totalVolume = notifier.totalVolumeLbs();
 
     try {
-      await repo.finishSession(
-        sessionId: session.sessionId,
-        routineId: session.routine.id,
-        durationSeconds: _elapsedSeconds,
-        totalVolumeLbs: totalVolume,
-        loggedSets: loggedSets,
-      );
+      await notifier.persistSession(_elapsedSeconds);
     } catch (_) {}
 
     notifier.clearSession();

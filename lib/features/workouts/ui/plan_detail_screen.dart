@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ember/core/theme/app_colors.dart';
 import 'package:ember/core/router/app_routes.dart';
+import 'package:ember/features/session/providers/session_provider.dart';
 import 'package:ember/features/workouts/data/plan_models.dart';
 import 'package:ember/features/workouts/providers/plan_provider.dart';
 import 'package:ember/features/workouts/providers/workout_provider.dart';

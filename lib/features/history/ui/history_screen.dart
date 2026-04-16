@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ember/core/theme/app_colors.dart';
-import 'package:ember/features/history/data/history_models.dart';
+import 'package:ember/features/history/domain/entities/history_entities.dart';
+import 'package:ember/features/history/presentation/state/history_view_state.dart';
 import 'package:ember/features/history/providers/history_provider.dart';
-import 'package:ember/features/profile/providers/profile_provider.dart';
 
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
@@ -93,9 +93,8 @@ class _TopBar extends StatelessWidget {
 class _SummaryStats extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final summaryAsync = ref.watch(weekSummaryProvider);
-    final profileAsync = ref.watch(userProfileProvider);
-    final useKg = profileAsync.asData?.value?.unitSystem.value == 'kg_km';
+    final state = ref.watch(historyViewStateProvider);
+    final summaryAsync = state.weekSummary;
 
     return summaryAsync.when(
       loading: () => const _SummaryStatsShimmer(),
@@ -105,7 +104,7 @@ class _SummaryStats extends ConsumerWidget {
           Expanded(
             child: _StatCard(
               label: 'Volume',
-              value: summary.formattedVolume(useKg: useKg),
+              value: summary.formattedVolume(useKg: state.useKg),
               icon: Icons.fitness_center_rounded,
             ),
           ),
@@ -219,43 +218,17 @@ class _StatCard extends StatelessWidget {
 class _WeekView extends ConsumerWidget {
   static const Color _primaryOrange = AppColors.primary;
   static const List<String> _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  static final _formatter = _MonthYearFormatter();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final monday = ref.watch(selectedWeekMondayProvider);
-    final selectedDay = ref.watch(selectedDayProvider);
-    final burnStatusAsync = ref.watch(weekBurnStatusProvider);
-    final profileAsync = ref.watch(userProfileProvider);
-
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-
-    // Use the real account creation date, falling back to app launch date.
-    final createdAt = profileAsync.asData?.value?.createdAt ?? todayDate;
-    final createdDateOnly = DateTime(
-      createdAt.year,
-      createdAt.month,
-      createdAt.day,
-    );
-    final earliestMonday = _mondayOf(createdDateOnly);
-
-    // Back is disabled when the current monday IS the earliest monday.
-    final canGoBack = monday.isAfter(earliestMonday);
-
-    // Forward is disabled when the current monday's week contains today
-    // or is already in the future (should not happen but guard anyway).
-    final nextMonday = monday.add(const Duration(days: 7));
-    final canGoForward = nextMonday.isBefore(todayDate) ||
-        nextMonday == todayDate ||
-        nextMonday
-            .isBefore(todayDate.add(const Duration(days: 1))) &&
-            monday != _mondayOf(todayDate);
-
-    final burnStatuses = burnStatusAsync.asData?.value ?? {};
+    final state = ref.watch(historyViewStateProvider);
+    final controller = ref.read(historyActionsProvider);
+    final monday = state.selectedWeekMonday;
+    final selectedDay = state.selectedDay;
+    final burnStatuses = state.weekBurnStatuses.asData?.value ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,10 +239,7 @@ class _WeekView extends ConsumerWidget {
           child: Row(
             children: [
               Text(
-                _formatter.format(
-                  monday,
-                  monday.add(const Duration(days: 6)),
-                ),
+                state.weekRangeLabel,
                 style: textTheme.headlineMedium?.copyWith(
                   fontSize: 16,
                   color: colorScheme.onSurface,
@@ -279,23 +249,19 @@ class _WeekView extends ConsumerWidget {
               const Spacer(),
               _NavArrow(
                 icon: Icons.chevron_left_rounded,
-                enabled: canGoBack,
+                enabled: state.canGoBack,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  ref
-                      .read(selectedWeekMondayProvider.notifier)
-                      .goToPreviousWeek();
+                  controller.goToPreviousWeek();
                 },
               ),
               const SizedBox(width: 4),
               _NavArrow(
                 icon: Icons.chevron_right_rounded,
-                enabled: canGoForward,
+                enabled: state.canGoForward,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  ref
-                      .read(selectedWeekMondayProvider.notifier)
-                      .goToNextWeek();
+                  controller.goToNextWeek();
                 },
               ),
             ],
@@ -312,22 +278,11 @@ class _WeekView extends ConsumerWidget {
             itemCount: 7,
             itemBuilder: (context, index) {
               final cellDate = monday.add(Duration(days: index));
-              final cellDateOnly = DateTime(
-                cellDate.year,
-                cellDate.month,
-                cellDate.day,
-              );
-              final isFuture = cellDateOnly.isAfter(todayDate);
+              final cellDateOnly = HistoryViewState.normalizeDate(cellDate);
+              final isFuture = cellDateOnly.isAfter(state.todayDate);
               final isSelected = cellDateOnly ==
-                  DateTime(
-                    selectedDay.year,
-                    selectedDay.month,
-                    selectedDay.day,
-                  );
-              final dateKey =
-                  '${cellDate.year}-'
-                  '${cellDate.month.toString().padLeft(2, '0')}-'
-                  '${cellDate.day.toString().padLeft(2, '0')}';
+                  HistoryViewState.normalizeDate(selectedDay);
+              final dateKey = HistoryViewState.dateKeyFor(cellDateOnly);
               final burnStatus = burnStatuses[dateKey];
 
               return GestureDetector(
@@ -335,9 +290,7 @@ class _WeekView extends ConsumerWidget {
                     ? null
                     : () {
                         HapticFeedback.selectionClick();
-                        ref
-                            .read(selectedDayProvider.notifier)
-                            .selectDay(cellDateOnly);
+                        controller.selectDay(cellDateOnly);
                       },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -420,10 +373,6 @@ class _WeekView extends ConsumerWidget {
       ],
     );
   }
-
-  static DateTime _mondayOf(DateTime date) {
-    return date.subtract(Duration(days: date.weekday - 1));
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -437,7 +386,7 @@ class _BurnIndicator extends StatelessWidget {
     required this.isSelected,
   });
 
-  final String? burnStatus;
+  final BurnStatus? burnStatus;
   final bool isFuture;
   final bool isSelected;
 
@@ -448,7 +397,7 @@ class _BurnIndicator extends StatelessWidget {
       return const SizedBox(width: 20, height: 8);
     }
 
-    if (burnStatus == 'workout_done') {
+    if (burnStatus == BurnStatus.workoutDone) {
       return Container(
         width: 20,
         height: 8,
@@ -459,7 +408,7 @@ class _BurnIndicator extends StatelessWidget {
       );
     }
 
-    if (burnStatus == 'rest_day') {
+    if (burnStatus == BurnStatus.restDay) {
       return Container(
         width: 20,
         height: 8,
@@ -624,31 +573,6 @@ class _NavArrow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Month / year formatter
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _MonthYearFormatter {
-  static const _months = [
-    'January', 'February', 'March', 'April',
-    'May', 'June', 'July', 'August',
-    'September', 'October', 'November', 'December',
-  ];
-
-  String format(DateTime monday, DateTime sunday) {
-    if (monday.month == sunday.month && monday.year == sunday.year) {
-      return '${_months[monday.month - 1]} ${monday.year}';
-    }
-
-    final startLabel = _months[monday.month - 1].substring(0, 3);
-    final endLabel = monday.year == sunday.year
-        ? _months[sunday.month - 1].substring(0, 3)
-        : '${_months[sunday.month - 1].substring(0, 3)} ${sunday.year}';
-
-    return '$startLabel – $endLabel ${monday.year}';
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Logbook
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -658,17 +582,9 @@ class _Logbook extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    final selectedDay = ref.watch(selectedDayProvider);
-    final sessionsAsync = ref.watch(daySessionsProvider);
-    final burnStatusAsync = ref.watch(weekBurnStatusProvider);
-    final profileAsync = ref.watch(userProfileProvider);
-    final useKg = profileAsync.asData?.value?.unitSystem.value == 'kg_km';
-
-    final dateKey =
-        '${selectedDay.year}-'
-        '${selectedDay.month.toString().padLeft(2, '0')}-'
-        '${selectedDay.day.toString().padLeft(2, '0')}';
-    final burnStatus = burnStatusAsync.asData?.value[dateKey];
+    final state = ref.watch(historyViewStateProvider);
+    final sessionsAsync = state.daySessions;
+    final burnStatus = state.selectedDayBurnStatus;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -682,7 +598,7 @@ class _Logbook extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          _formatSelectedDate(selectedDay),
+          state.selectedDateLabel,
           style: textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
             fontSize: 13,
@@ -710,14 +626,14 @@ class _Logbook extends ConsumerWidget {
                     .map(
                       (s) => Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: _SessionCard(session: s, useKg: useKg),
+                        child: _SessionCard(session: s, useKg: state.useKg),
                       ),
                     )
                     .toList(),
               );
             }
 
-            if (burnStatus == 'rest_day') {
+            if (burnStatus == BurnStatus.restDay) {
               return _LogbookMessage(
                 icon: Icons.hotel_rounded,
                 title: 'Rest day.',
@@ -737,19 +653,6 @@ class _Logbook extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  String _formatSelectedDate(DateTime date) {
-    const months = [
-      'January', 'February', 'March', 'April',
-      'May', 'June', 'July', 'August',
-      'September', 'October', 'November', 'December',
-    ];
-    const weekdays = [
-      '', 'Monday', 'Tuesday', 'Wednesday',
-      'Thursday', 'Friday', 'Saturday', 'Sunday',
-    ];
-    return '${weekdays[date.weekday]}, ${months[date.month - 1]} ${date.day}';
   }
 }
 

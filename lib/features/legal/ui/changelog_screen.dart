@@ -1,32 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ember/core/theme/app_colors.dart';
+import '../domain/entities/legal_entities.dart';
+import '../providers/legal_provider.dart';
 
-class ChangelogScreen extends StatelessWidget {
+class ChangelogScreen extends ConsumerWidget {
   const ChangelogScreen({super.key});
 
   static const Color _primaryOrange = AppColors.primary;
 
-  // Add new entries at the top of this list as the app grows.
-  static const List<_ChangelogEntry> _entries = [
-    _ChangelogEntry(
-      version: '1.0.0',
-      date: 'April 11, 2026',
-      isLatest: true,
-      changes: [
-        _Change(type: _ChangeType.added, description: 'User authentication with email and password.'),
-        _Change(type: _ChangeType.added, description: 'Profile setup with username, bio, and avatar selection.'),
-        _Change(type: _ChangeType.added, description: 'Profile screen with editable bio, fitness level, and preferences.'),
-        _Change(type: _ChangeType.added, description: 'Light and dark theme support driven by user preference.'),
-        _Change(type: _ChangeType.added, description: '12 custom Ember-themed avatars to choose from.'),
-        _Change(type: _ChangeType.added, description: 'Offline-first profile caching with local SQLite storage.'),
-        _Change(type: _ChangeType.added, description: 'Terms and Conditions and Privacy Policy screens.'),
-      ],
-    ),
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entries = ref.watch(legalChangelogEntriesProvider);
+
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isDark = colorScheme.brightness == Brightness.dark;
@@ -86,10 +73,10 @@ class ChangelogScreen extends StatelessWidget {
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
-                  itemCount: _entries.length,
+                  itemCount: entries.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 24),
                   itemBuilder: (context, index) {
-                    return _ChangelogCard(entry: _entries[index]);
+                    return _ChangelogCard(entry: entries[index]);
                   },
                 ),
               ),
@@ -101,38 +88,12 @@ class ChangelogScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Data models
-// ─────────────────────────────────────────────────────────────────────────────
-
-enum _ChangeType { added, changed, fixed, removed }
-
-class _Change {
-  const _Change({required this.type, required this.description});
-  final _ChangeType type;
-  final String description;
-}
-
-class _ChangelogEntry {
-  const _ChangelogEntry({
-    required this.version,
-    required this.date,
-    required this.changes,
-    this.isLatest = false,
-  });
-  final String version;
-  final String date;
-  final List<_Change> changes;
-  final bool isLatest;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Widgets
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ChangelogCard extends StatelessWidget {
   const _ChangelogCard({required this.entry});
-  final _ChangelogEntry entry;
+  final LegalChangelogEntry entry;
 
   static const Color _primaryOrange = AppColors.primary;
 
@@ -229,30 +190,30 @@ class _ChangelogCard extends StatelessWidget {
 
 class _ChangeItem extends StatelessWidget {
   const _ChangeItem({required this.change});
-  final _Change change;
+  final LegalChangelogChange change;
 
-  Color _typeColor(_ChangeType type) {
+  Color _typeColor(LegalChangelogChangeType type) {
     switch (type) {
-      case _ChangeType.added:
+      case LegalChangelogChangeType.added:
         return AppColors.success;
-      case _ChangeType.changed:
+      case LegalChangelogChangeType.changed:
         return AppColors.accent;
-      case _ChangeType.fixed:
+      case LegalChangelogChangeType.fixed:
         return AppColors.primary;
-      case _ChangeType.removed:
+      case LegalChangelogChangeType.removed:
         return AppColors.secondary;
     }
   }
 
-  String _typeLabel(_ChangeType type) {
+  String _typeLabel(LegalChangelogChangeType type) {
     switch (type) {
-      case _ChangeType.added:
+      case LegalChangelogChangeType.added:
         return 'NEW';
-      case _ChangeType.changed:
+      case LegalChangelogChangeType.changed:
         return 'UPD';
-      case _ChangeType.fixed:
+      case LegalChangelogChangeType.fixed:
         return 'FIX';
-      case _ChangeType.removed:
+      case LegalChangelogChangeType.removed:
         return 'REM';
     }
   }

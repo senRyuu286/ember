@@ -180,3 +180,21 @@ class RoutineSummary {
     return '~${m}m';
   }
 }
+
+class LoggedSetData {
+  final String exerciseId;
+  final int setNumber;
+  final int? reps;
+  final double? weight;
+  final String unit;
+  final DateTime completedAt;
+
+  const LoggedSetData({
+    required this.exerciseId,
+    required this.setNumber,
+    required this.reps,
+    required this.weight,
+    required this.unit,
+    required this.completedAt,
+  });
+}

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ember/core/theme/app_colors.dart';
 import 'package:ember/features/exercises/data/exercise_models.dart';
+import 'package:ember/features/exercises/presentation/state/exercise_filters.dart';
 import 'package:ember/features/exercises/providers/exercise_provider.dart';
 import 'exercise_detail_sheet.dart';
 import 'exercise_filter_sheet.dart';

@@ -2,9 +2,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ember/local_db/daos/plan_dao.dart';
 import 'package:drift/drift.dart' show Value;
 import '../../../local_db/app_database.dart';
+import '../domain/repositories/plan_repository.dart';
 import 'plan_models.dart';
 
-class PlanRepository {
+class PlanRepository implements IPlanRepository {
   final SupabaseClient _client;
   final PlanDao _planDao;
 
@@ -14,6 +15,7 @@ class PlanRepository {
 
   // ── Plan summaries ────────────────────────────────────────────────────────
 
+  @override
   Future<List<WorkoutPlanSummary>> getPlanSummaries() async {
     final cached = await _getCachedSummaries();
     if (cached.isNotEmpty) {
@@ -82,6 +84,7 @@ class PlanRepository {
 
   // ── Plan detail ───────────────────────────────────────────────────────────
 
+  @override
   Future<WorkoutPlan?> getPlanDetail(String planId) async {
     final cached = await _getCachedPlanDetail(planId);
     if (cached != null) {
@@ -232,6 +235,7 @@ class PlanRepository {
 
   // ── Plan mutations ────────────────────────────────────────────────────────
 
+  @override
   Future<String> createPlan({
     required String title,
     String? description,
@@ -260,6 +264,7 @@ class PlanRepository {
     return planId;
   }
 
+  @override
   Future<void> updatePlan({
     required String planId,
     required String title,
@@ -279,11 +284,13 @@ class PlanRepository {
     await _planDao.deletePlanById(planId).catchError((_) async {});
   }
 
+  @override
   Future<void> deletePlan(String planId) async {
     await _client.from('workout_plans').delete().eq('id', planId);
     await _planDao.deletePlanById(planId).catchError((_) async {});
   }
 
+  @override
   Future<void> activatePlan(String planId) async {
     final uid = _userId;
     if (uid == null) return;
@@ -303,6 +310,7 @@ class PlanRepository {
     await _planDao.deletePlanById(planId).catchError((_) async {});
   }
 
+  @override
   Future<void> deactivatePlan(String planId) async {
     await _client.from('workout_plans').update({
       'is_active': false,
@@ -371,6 +379,7 @@ class PlanRepository {
     );
   }
 
+  @override
   Future<List<WorkoutPlanSummary>> forceFetchSummaries() =>
       _fetchAndCacheSummaries();
 }

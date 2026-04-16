@@ -360,12 +360,11 @@ class CreateEditRoutineScreen extends ConsumerWidget {
 
   Future<void> _save(BuildContext context, WidgetRef ref) async {
     HapticFeedback.mediumImpact();
-    final repo = ref.read(workoutRepositoryProvider);
     final notifier = ref.read(
         createEditRoutineProvider(existingRoutine).notifier);
 
     try {
-      await notifier.save(repo, existingRoutine?.id);
+      await notifier.save(existingRoutine?.id);
       // Force a full network refresh so the new routine appears in the list.
       await ref.read(routineListProvider.notifier).refresh();
       // Clear the form state.

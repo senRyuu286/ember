@@ -3,9 +3,10 @@ import 'package:ember/features/exercises/data/exercise_models.dart';
 import 'package:ember/local_db/app_database.dart';
 import 'package:ember/local_db/daos/routine_dao.dart';
 import 'package:drift/drift.dart' show Value;
+import '../domain/repositories/workout_repository.dart';
 import 'workout_models.dart';
 
-class WorkoutRepository {
+class WorkoutRepository implements IWorkoutRepository {
   final SupabaseClient _client;
   final RoutineDao _routineDao;
 
@@ -17,6 +18,7 @@ class WorkoutRepository {
 
   /// Returns cached summaries if available, then fetches fresh data from
   /// Supabase and updates the cache. Always returns the freshest data it can.
+  @override
   Future<List<RoutineSummary>> getRoutineSummaries() async {
     final cached = await _getCachedSummaries();
     if (cached.isNotEmpty) {
@@ -148,6 +150,7 @@ class WorkoutRepository {
 
   // ── Routine detail ────────────────────────────────────────────────────────
 
+  @override
   Future<Routine?> getRoutineDetail(String routineId) async {
     final cached = await _getCachedRoutineDetail(routineId);
     if (cached != null) {
@@ -307,6 +310,7 @@ class WorkoutRepository {
 
   /// Creates the routine in local cache first, then syncs to Supabase.
   /// Returns the Supabase-assigned ID.
+  @override
   Future<String> createRoutine({
     required String title,
     String? description,
@@ -396,6 +400,7 @@ class WorkoutRepository {
     return routineId;
   }
 
+  @override
   Future<void> updateRoutine({
     required String routineId,
     required String title,
@@ -443,6 +448,7 @@ class WorkoutRepository {
     await _routineDao.deleteRoutineById(routineId).catchError((_) async {});
   }
 
+  @override
   Future<void> deleteRoutine(String routineId) async {
     await _client.from('routines').delete().eq('id', routineId);
     await _routineDao.deleteRoutineById(routineId).catchError((_) async {});
@@ -465,6 +471,7 @@ class WorkoutRepository {
 
   // ── Sessions ──────────────────────────────────────────────────────────────
 
+  @override
   Future<String> startSession({
     required String routineId,
     required String routineName,
@@ -486,6 +493,7 @@ class WorkoutRepository {
     return response['id'] as String;
   }
 
+  @override
   Future<void> finishSession({
     required String sessionId,
     required String routineId,
@@ -539,24 +547,7 @@ class WorkoutRepository {
 
   // Add this public wrapper in workout_repository.dart
   /// Called by the provider after mutations to force a network refresh.
+  @override
   Future<List<RoutineSummary>> forceFetchSummaries() =>
       _fetchAndCacheRoutineSummaries();
-}
-
-class LoggedSetData {
-  final String exerciseId;
-  final int setNumber;
-  final int? reps;
-  final double? weight;
-  final String unit;
-  final DateTime completedAt;
-
-  const LoggedSetData({
-    required this.exerciseId,
-    required this.setNumber,
-    required this.reps,
-    required this.weight,
-    required this.unit,
-    required this.completedAt,
-  });
 }

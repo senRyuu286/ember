@@ -1,60 +1,19 @@
 import 'package:ember/core/theme/app_colors.dart';
-import 'package:ember/features/dashboard/ui/dashboard_screen.dart';
-import 'package:ember/features/workouts/ui/workouts_screen.dart';
-import 'package:ember/features/exercises/ui/exercises_screen.dart';
-import 'package:ember/features/history/ui/history_screen.dart';
-import 'package:ember/features/profile/ui/profile_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class HomeScreen extends StatefulWidget {
+import '../domain/entities/home_navigation.dart';
+import '../providers/home_provider.dart';
+
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentIndex = ref.watch(homeCurrentIndexProvider);
+    final destinations = ref.watch(homeDestinationsProvider);
+    final screens = ref.watch(homeScreensProvider);
 
-class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
-
-  static const List<_NavDestination> _destinations = [
-    _NavDestination(
-      icon: Icons.grid_view_outlined,
-      selectedIcon: Icons.grid_view_rounded,
-      label: 'Dashboard',
-    ),
-    _NavDestination(
-      icon: Icons.fitness_center_outlined,
-      selectedIcon: Icons.fitness_center_rounded,
-      label: 'Workouts',
-    ),
-    _NavDestination(
-      icon: Icons.menu_book_outlined,
-      selectedIcon: Icons.menu_book_rounded,
-      label: 'Exercises',
-    ),
-    _NavDestination(
-      icon: Icons.bar_chart_outlined,
-      selectedIcon: Icons.bar_chart_rounded,
-      label: 'History',
-    ),
-    _NavDestination(
-      icon: Icons.person_outline_rounded,
-      selectedIcon: Icons.person_rounded,
-      label: 'Profile',
-    ),
-  ];
-
-  // Replaced placeholders with actual feature screens
-  static const List<Widget> _screens = [
-    DashboardScreen(),
-    WorkoutsScreen(),
-    ExercisesScreen(),
-    HistoryScreen(),
-    ProfileScreen(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
       body: AnimatedSwitcher(
@@ -64,16 +23,15 @@ class _HomeScreenState extends State<HomeScreen> {
         transitionBuilder: (child, animation) =>
             FadeTransition(opacity: animation, child: child),
         child: KeyedSubtree(
-          key: ValueKey<int>(_currentIndex),
-          child: _screens[_currentIndex],
+          key: ValueKey<int>(currentIndex),
+          child: screens[currentIndex],
         ),
       ),
       bottomNavigationBar: _FloatingNavBar(
-        currentIndex: _currentIndex,
-        destinations: _destinations,
+        currentIndex: currentIndex,
+        destinations: destinations,
         onTap: (index) {
-          if (index == _currentIndex) return;
-          setState(() => _currentIndex = index);
+          ref.read(homeCurrentIndexProvider.notifier).selectTab(index);
         },
       ),
     );
@@ -82,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _FloatingNavBar extends StatelessWidget {
   final int currentIndex;
-  final List<_NavDestination> destinations;
+  final List<HomeNavDestination> destinations;
   final ValueChanged<int> onTap;
 
   const _FloatingNavBar({
@@ -169,17 +127,4 @@ class _FloatingNavBar extends StatelessWidget {
       ),
     );
   }
-}
-
-// Internal model for nav destinations
-class _NavDestination {
-  final IconData icon;
-  final IconData selectedIcon;
-  final String label;
-
-  const _NavDestination({
-    required this.icon,
-    required this.selectedIcon,
-    required this.label,
-  });
 }
