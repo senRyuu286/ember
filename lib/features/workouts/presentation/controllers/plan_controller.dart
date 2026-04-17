@@ -53,6 +53,18 @@ class PlanListNotifier extends AsyncNotifier<List<WorkoutPlanSummary>> {
   }
 
   Future<void> deletePlan(String planId) async {
+    final plans = state.asData?.value ?? const <WorkoutPlanSummary>[];
+    WorkoutPlanSummary? plan;
+    for (final p in plans) {
+      if (p.id == planId) {
+        plan = p;
+        break;
+      }
+    }
+    if (plan?.isActive == true) {
+      throw Exception('Active plans cannot be deleted.');
+    }
+
     final useCase = ref.read(deletePlanUseCaseProvider);
     await useCase.execute(planId);
     await refresh();

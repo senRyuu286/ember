@@ -212,6 +212,10 @@ class _RoutinesTab extends ConsumerWidget {
         ),
       ),
       data: (routines) {
+        final routineById = <String, RoutineSummary>{
+          for (final r in routines) r.id: r,
+        };
+
         final filtered = searchQuery.isEmpty
             ? routines
             : routines
@@ -225,11 +229,16 @@ class _RoutinesTab extends ConsumerWidget {
             filtered.where((r) => !r.isBuiltIn).toList();
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
           children: [
             _ForgeButton(
               label: 'Forge New Routine',
               onTap: () => context.push(AppRoutes.createRoutine),
+            ),
+            const SizedBox(height: 20),
+            _TodaysAssignedRoutinesSection(
+              routineById: routineById,
+              restTimerSeconds: restTimer,
             ),
             const SizedBox(height: 28),
 
@@ -319,6 +328,14 @@ class _PlansTab extends ConsumerWidget {
         ),
       ),
       data: (plans) {
+        WorkoutPlanSummary? activePlan;
+        for (final plan in plans) {
+          if (plan.isActive) {
+            activePlan = plan;
+            break;
+          }
+        }
+
         final filtered = searchQuery.isEmpty
             ? plans
             : plans
@@ -332,12 +349,15 @@ class _PlansTab extends ConsumerWidget {
             filtered.where((p) => !p.isBuiltIn).toList();
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
           children: [
             _ForgeButton(
               label: 'Forge New Plan',
               onTap: () => context.push(AppRoutes.createPlan),
             ),
+            const SizedBox(height: 20),
+
+            _ActivePlanSection(activePlan: activePlan),
             const SizedBox(height: 28),
 
             if (userPlans.isNotEmpty) ...[
@@ -431,10 +451,14 @@ class _SectionHeader extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.count,
+    this.countLabel,
+    this.wrapTitle = false,
   });
   final String title;
   final IconData icon;
   final int count;
+  final String? countLabel;
+  final bool wrapTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -445,12 +469,17 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Icon(icon, color: AppColors.primary, size: 20),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: textTheme.headlineMedium?.copyWith(
-            fontSize: 18,
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w700,
+        Expanded(
+          child: Text(
+            title,
+            maxLines: wrapTitle ? 2 : 1,
+            overflow: wrapTitle ? TextOverflow.visible : TextOverflow.ellipsis,
+            softWrap: wrapTitle,
+            style: textTheme.headlineMedium?.copyWith(
+              fontSize: 18,
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -462,7 +491,7 @@ class _SectionHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            '$count',
+            countLabel ?? '$count',
             style: textTheme.labelSmall?.copyWith(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -475,6 +504,437 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+class _ActivePlanSection extends StatelessWidget {
+  const _ActivePlanSection({required this.activePlan});
+  final WorkoutPlanSummary? activePlan;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.play_circle_fill_rounded,
+                color: AppColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Active Plan',
+              style: textTheme.headlineMedium?.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (activePlan != null)
+          _PlanCard(plan: activePlan!)
+        else
+          const _NoActivePlanCard(),
+      ],
+    );
+  }
+}
+
+class _NoActivePlanCard extends StatelessWidget {
+  const _NoActivePlanCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outline),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.flag_outlined,
+                size: 20, color: colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No active plan yet',
+              style: textTheme.bodyMedium?.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodaysAssignedRoutinesSection extends ConsumerWidget {
+  const _TodaysAssignedRoutinesSection({
+    required this.routineById,
+    required this.restTimerSeconds,
+  });
+
+  final Map<String, RoutineSummary> routineById;
+  final int restTimerSeconds;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plansAsync = ref.watch(planListProvider);
+
+    return plansAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (plans) {
+        WorkoutPlanSummary? activePlan;
+        for (final p in plans) {
+          if (p.isActive) {
+            activePlan = p;
+            break;
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (activePlan == null)
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SectionHeader(
+                    title: "Today's Assigned Routines",
+                    icon: Icons.today_rounded,
+                    count: 0,
+                    wrapTitle: true,
+                  ),
+                  SizedBox(height: 12),
+                  _InfoStateCard(
+                    icon: Icons.flag_outlined,
+                    message: 'No active workout plan.',
+                  ),
+                ],
+              )
+            else
+              _ActivePlanTodayRoutines(
+                activePlanId: activePlan.id,
+                routineById: routineById,
+                restTimerSeconds: restTimerSeconds,
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ActivePlanTodayRoutines extends ConsumerWidget {
+  const _ActivePlanTodayRoutines({
+    required this.activePlanId,
+    required this.routineById,
+    required this.restTimerSeconds,
+  });
+
+  final String activePlanId;
+  final Map<String, RoutineSummary> routineById;
+  final int restTimerSeconds;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detailAsync = ref.watch(planDetailProvider(activePlanId));
+    final completedToday =
+        ref.watch(todayCompletedRoutineIdsProvider).asData?.value ??
+            <String>{};
+
+    DateTime normalizedDate(DateTime date) =>
+        DateTime(date.year, date.month, date.day);
+
+    return detailAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, _) => const _InfoStateCard(
+        icon: Icons.error_outline_rounded,
+        message: 'Could not load today\'s routines.',
+      ),
+      data: (plan) {
+        if (plan == null || !plan.isActive || plan.currentWeekIndex == null) {
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeader(
+                title: "Today's Assigned Routines",
+                icon: Icons.today_rounded,
+                count: 0,
+                wrapTitle: true,
+              ),
+              SizedBox(height: 12),
+              _InfoStateCard(
+                icon: Icons.flag_outlined,
+                message: 'No active workout plan.',
+              ),
+            ],
+          );
+        }
+
+        final sortedDays = [...plan.days]
+          ..sort((a, b) {
+            final byWeek = a.weekNumber.compareTo(b.weekNumber);
+            if (byWeek != 0) return byWeek;
+            return a.dayOfWeek.compareTo(b.dayOfWeek);
+          });
+
+        final startDate = normalizedDate(plan.startedAt ?? DateTime.now());
+        final today = normalizedDate(DateTime.now());
+        PlanDay? todayDay;
+
+        for (int i = 0; i < sortedDays.length; i++) {
+          final targetDate = startDate.add(Duration(days: i));
+          if (!targetDate.isBefore(today) && !targetDate.isAfter(today)) {
+            todayDay = sortedDays[i];
+            break;
+          }
+        }
+
+        if (todayDay == null) {
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeader(
+                title: "Today's Assigned Routines",
+                icon: Icons.today_rounded,
+                count: 0,
+                wrapTitle: true,
+              ),
+              SizedBox(height: 12),
+              _InfoStateCard(
+                icon: Icons.event_busy_outlined,
+                message: 'No routines assigned for today.',
+              ),
+            ],
+          );
+        }
+
+        final day = todayDay;
+        final assignedCount = day.routines.length;
+        final completedCount = day.routines
+            .where((r) => completedToday.contains(r.routineId))
+            .length;
+
+        if (day.isRestDay) {
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeader(
+                title: "Today's Assigned Routines",
+                icon: Icons.today_rounded,
+                count: 0,
+                wrapTitle: true,
+              ),
+              SizedBox(height: 12),
+              _InfoStateCard(
+                icon: Icons.self_improvement_rounded,
+                message: 'Today is a rest day.',
+              ),
+            ],
+          );
+        }
+
+        if (day.routines.isEmpty) {
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeader(
+                title: "Today's Assigned Routines",
+                icon: Icons.today_rounded,
+                count: 0,
+              ),
+              SizedBox(height: 12),
+              _InfoStateCard(
+                icon: Icons.event_busy_outlined,
+                message: 'No routines assigned for today.',
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: day.routines.map((routineRef) {
+            final summary = routineById[routineRef.routineId];
+            if (summary != null) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (routineRef == day.routines.first) ...[
+                    _SectionHeader(
+                      title: "Today's Assigned Routines",
+                      icon: Icons.today_rounded,
+                      count: assignedCount,
+                      countLabel: '$completedCount/$assignedCount',
+                      wrapTitle: true,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _RoutineCard(
+                      routine: summary,
+                      restTimerSeconds: restTimerSeconds,
+                      isCompleted:
+                          completedToday.contains(routineRef.routineId),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (routineRef == day.routines.first) ...[
+                  _SectionHeader(
+                    title: "Today's Assigned Routines",
+                    icon: Icons.today_rounded,
+                    count: assignedCount,
+                    countLabel: '$completedCount/$assignedCount',
+                    wrapTitle: true,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _FallbackAssignedRoutineRow(
+                    title: routineRef.routineTitle ?? 'Untitled routine',
+                    isCompleted:
+                        completedToday.contains(routineRef.routineId),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _InfoStateCard extends StatelessWidget {
+  const _InfoStateCard({
+    required this.icon,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colorScheme.outline),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FallbackAssignedRoutineRow extends StatelessWidget {
+  const _FallbackAssignedRoutineRow({
+    required this.title,
+    this.isCompleted = false,
+  });
+
+  final String title;
+  final bool isCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colorScheme.outline),
+      ),
+      child: Row(
+        children: [
+          if (isCompleted) ...[
+            const Icon(
+              Icons.check_circle_rounded,
+              size: 16,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+          ],
+          Icon(
+            Icons.fitness_center_rounded,
+            size: 16,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Routine card  (now uses RoutineSummary)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -483,9 +943,11 @@ class _RoutineCard extends ConsumerWidget {
   const _RoutineCard({
     required this.routine,
     required this.restTimerSeconds,
+    this.isCompleted = false,
   });
   final RoutineSummary routine;
   final int restTimerSeconds;
+  final bool isCompleted;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -550,6 +1012,34 @@ class _RoutineCard extends ConsumerWidget {
                       ),
                     ),
                   ),
+                if (isCompleted) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color:
+                          AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_rounded,
+                            size: 10, color: AppColors.primary),
+                        const SizedBox(width: 3),
+                        Text(
+                          'Completed',
+                          style: textTheme.labelSmall?.copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(width: 8),
                 Icon(
                   Icons.arrow_forward_ios_rounded,

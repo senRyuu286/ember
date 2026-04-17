@@ -72,6 +72,8 @@ class _RoutineDetailBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final activeSession = ref.watch(activeSessionProvider);
+    final isActiveRoutine = activeSession?.routine.id == routine.id;
 
     return SafeArea(
       child: Column(
@@ -97,7 +99,7 @@ class _RoutineDetailBody extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (routine.isOwned) ...[
+                if (routine.isOwned && !isActiveRoutine) ...[
                   IconButton(
                     onPressed: () => context.push(
                       AppRoutes.editRoutine
@@ -115,6 +117,23 @@ class _RoutineDetailBody extends ConsumerWidget {
                         Icons.delete_outline_rounded,
                         color: AppColors.secondary,
                         size: 20),
+                  ),
+                ] else if (routine.isOwned && isActiveRoutine) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'Active',
+                      style: textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
                 ],
               ],

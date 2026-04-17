@@ -253,12 +253,25 @@ class CreateEditPlanScreen extends ConsumerWidget {
   }
 
   Future<void> _save(BuildContext context, WidgetRef ref) async {
+    if (existingPlan?.isActive == true) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Active plans cannot be edited.')),
+        );
+      }
+      return;
+    }
+
     HapticFeedback.mediumImpact();
     final notifier =
         ref.read(createEditPlanProvider(existingPlan).notifier);
     try {
-      await notifier.save(existingPlan?.id);
+      final savedPlanId = await notifier.save(existingPlan?.id);
       await ref.read(planListProvider.notifier).refresh();
+      if (savedPlanId != null) {
+        ref.invalidate(planDetailProvider(savedPlanId));
+      }
       ref.invalidate(createEditPlanProvider(existingPlan));
       if (context.mounted) context.pop();
     } catch (e) {

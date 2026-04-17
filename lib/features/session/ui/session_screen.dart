@@ -10,6 +10,7 @@ import 'package:ember/features/exercises/ui/exercise_detail_sheet.dart';
 import 'package:ember/features/session/data/models/session_models.dart';
 import 'package:ember/features/session/providers/session_provider.dart';
 import 'package:ember/features/workouts/data/workout_models.dart';
+import 'package:ember/features/workouts/providers/workout_provider.dart';
 import 'package:ember/features/profile/providers/profile_provider.dart';
 
 class SessionScreen extends ConsumerStatefulWidget {
@@ -156,6 +157,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
 
     try {
       await notifier.persistSession(_elapsedSeconds);
+      ref.invalidate(todayCompletedRoutineIdsProvider);
     } catch (_) {}
 
     notifier.clearSession();

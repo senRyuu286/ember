@@ -110,10 +110,38 @@ class PlanRepository implements IPlanRepository {
     for (final dayRow in dayRows) {
       final routineRows = await _planDao.getRoutinesForDay(dayRow.id);
       final routines = <PlanDayRoutineRef>[];
+      final missingRoutineIds = <String>[];
+      final titleByRoutineId = <String, String?>{};
 
       for (final r in routineRows) {
-        // Resolve the title from the local routine cache.
         final title = await _planDao.getRoutineTitleById(r.routineId);
+        titleByRoutineId[r.routineId] = title;
+        if (title == null || title.trim().isEmpty) {
+          missingRoutineIds.add(r.routineId);
+        }
+      }
+
+      if (missingRoutineIds.isNotEmpty) {
+        try {
+          final response = await _client
+              .from('routines')
+              .select('id, title')
+              .inFilter('id', missingRoutineIds);
+          for (final row in response as List) {
+            final map = Map<String, dynamic>.from(row as Map);
+            final id = map['id'] as String?;
+            final title = map['title'] as String?;
+            if (id != null && title != null && title.isNotEmpty) {
+              titleByRoutineId[id] = title;
+            }
+          }
+        } catch (_) {
+          // Non-fatal: UI will still show fallback text.
+        }
+      }
+
+      for (final r in routineRows) {
+        final title = titleByRoutineId[r.routineId];
         routines.add(PlanDayRoutineRef(
           id: r.id,
           planDayId: r.planDayId,
@@ -189,15 +217,14 @@ class PlanRepository implements IPlanRepository {
       final routineRefs = <PlanDayRoutineRef>[];
       for (final r in routinesResponse as List) {
         final rMap = Map<String, dynamic>.from(r as Map);
-        final routineMap = rMap['routines'] != null
-            ? Map<String, dynamic>.from(rMap['routines'] as Map)
-            : null;
+        final routineTitle =
+            _extractRoutineTitleFromJoinedPayload(rMap['routines']);
         routineRefs.add(PlanDayRoutineRef(
           id: rMap['id'] as String,
           planDayId: dayId,
           routineId: rMap['routine_id'] as String,
           sortOrder: (rMap['sort_order'] as int?) ?? 0,
-          routineTitle: routineMap?['title'] as String?,
+          routineTitle: routineTitle,
         ));
 
         dayRoutineCompanions.add(PlanDayRoutineTableCompanion(
@@ -260,7 +287,7 @@ class PlanRepository implements IPlanRepository {
 
     final planId = planResponse['id'] as String;
     await _upsertDaysToSupabase(planId, days);
-    await _planDao.deletePlanById(planId).catchError((_) async {});
+    await _refreshPlanCache(planId);
     return planId;
   }
 
@@ -272,6 +299,8 @@ class PlanRepository implements IPlanRepository {
     required int totalWeeks,
     required List<PlanDay> days,
   }) async {
+    await _ensurePlanNotActive(planId);
+
     await _client.from('workout_plans').update({
       'title': title,
       'description': description,
@@ -281,11 +310,13 @@ class PlanRepository implements IPlanRepository {
 
     await _client.from('plan_days').delete().eq('plan_id', planId);
     await _upsertDaysToSupabase(planId, days);
-    await _planDao.deletePlanById(planId).catchError((_) async {});
+    await _refreshPlanCache(planId);
   }
 
   @override
   Future<void> deletePlan(String planId) async {
+    await _ensurePlanNotActive(planId);
+
     await _client.from('workout_plans').delete().eq('id', planId);
     await _planDao.deletePlanById(planId).catchError((_) async {});
   }
@@ -307,7 +338,7 @@ class PlanRepository implements IPlanRepository {
       'started_at': now,
     }).eq('id', planId);
 
-    await _planDao.deletePlanById(planId).catchError((_) async {});
+    await _refreshPlanCache(planId);
   }
 
   @override
@@ -316,7 +347,15 @@ class PlanRepository implements IPlanRepository {
       'is_active': false,
       'started_at': null,
     }).eq('id', planId);
-    await _planDao.deletePlanById(planId).catchError((_) async {});
+    await _refreshPlanCache(planId);
+  }
+
+  Future<void> _refreshPlanCache(String planId) async {
+    try {
+      await _fetchAndCachePlanDetail(planId);
+    } catch (_) {
+      // Ignore cache refresh errors after successful remote mutation.
+    }
   }
 
   Future<void> _upsertDaysToSupabase(
@@ -377,6 +416,38 @@ class PlanRepository implements IPlanRepository {
       createdAt: Value((map['created_at'] as String?) ?? ''),
       updatedAt: Value(map['updated_at'] as String?),
     );
+  }
+
+  String? _extractRoutineTitleFromJoinedPayload(dynamic payload) {
+    if (payload == null) return null;
+
+    if (payload is Map) {
+      final map = Map<String, dynamic>.from(payload);
+      return map['title'] as String?;
+    }
+
+    if (payload is List && payload.isNotEmpty) {
+      final first = payload.first;
+      if (first is Map) {
+        final map = Map<String, dynamic>.from(first);
+        return map['title'] as String?;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _ensurePlanNotActive(String planId) async {
+    final row = await _client
+        .from('workout_plans')
+        .select('is_active')
+        .eq('id', planId)
+        .maybeSingle();
+
+    final isActive = (row?['is_active'] as bool?) ?? false;
+    if (isActive) {
+      throw Exception('Active plans cannot be edited or deleted.');
+    }
   }
 
   @override
